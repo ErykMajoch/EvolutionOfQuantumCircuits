@@ -1,0 +1,61 @@
+\documentclass[11pt,oneside]{book}
+\usepackage[margin=1.2in]{geometry}
+\usepackage[
+    backend=biber,
+    style=numeric,
+    giveninits=true
+]{biblatex}
+\usepackage{ragged2e}
+\usepackage{setspace}
+\usepackage[toc,page]{appendix}
+\usepackage[none]{hyphenat}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usepackage{makecell}
+
+\usetikzlibrary{shapes.geometric, positioning, fit}
+\addbibresource{bibliography.bib}
+
+% Literature bibliography style
+\defbibenvironment{nolabelbib}
+  {\list
+     {}
+     {\setlength{\leftmargin}{\bibhang}%
+      \setlength{\itemindent}{-\leftmargin}%
+      \setlength{\itemsep}{\bibitemsep}%
+      \setlength{\parsep}{\bibparsep}}}
+  {\endlist}
+  {\item}
+
+% Easy citation command
+\newcommand{\ccite}[2]{#1\textsuperscript{\cite{#2}}}
+
+\begin{document}
+
+\frontmatter
+
+\begin{titlepage}
+    \begin{center}
+        \includegraphics[width=5cm]{images/UOSLogo_Portrait_Violet_RGB.png}\\[2cm]
+        \linespread{1.2}\huge Description Report: {\bfseries Evolutionary Optimization of Quantum Circuits for Automated Circuit Design}\\[2cm]
+        \linespread{1}
+        {\Large Eryk Arkadiusz Majoch}\\[1cm]
+        {\large \emph{Supervisor:} Phil McMinn}\\[1cm]
+        \large COM3610 \\
+        \today
+    \end{center}
+\end{titlepage}
+
+\newpage
+\tableofcontents
+
+\setstretch{1.1} 
+
+\mainmatter
+\include{Chapters/1_Introduction}
+\include{Chapters/2_Analysis}
+\include{Chapters/3_PlanOfAction}
+
+\printbibliography[notkeyword=lit]
+
+\end{document}
