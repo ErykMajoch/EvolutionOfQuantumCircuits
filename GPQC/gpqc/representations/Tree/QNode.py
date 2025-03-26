@@ -13,11 +13,11 @@ class QNode:
     """
 
     def __init__(
-            self,
-            gate_type: str,
-            gate_category: str,
-            targets: List,
-            params: Dict = None,
+        self,
+        gate_type: str,
+        gate_category: str,
+        targets: List,
+        params: Dict = None,
     ):
         """
         Initialise a quantum circuit tree node representing a quantum gate.

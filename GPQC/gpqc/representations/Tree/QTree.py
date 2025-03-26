@@ -71,10 +71,10 @@ class QTree(CircuitRepresentation):
             max_generations: Maximum number of generations
             max_mutations: Maximum number of mutations to apply
         """
-        for _ in range(max_mutations + 1):
-            if np.random.random() > mutation_rate:
-                continue
 
+        for _ in range(max_mutations):
+            if np.random.random() > mutation_rate:
+                return
             qubit = np.random.randint(0, self.num_qubits)
             depth = np.random.randint(0, self.max_depth)
             match mutation_type:
@@ -109,9 +109,9 @@ class QTree(CircuitRepresentation):
         Returns:
             A new QTree resulting from the crossover
         """
-        offspring = deepcopy(self)
+        offspring = self.replicate()
 
-        if np.random.random() < crossover_rate:
+        if np.random.random() > crossover_rate:
             return offspring
 
         qubit = np.random.randint(0, self.num_qubits)
@@ -130,6 +130,45 @@ class QTree(CircuitRepresentation):
             A new identical copy of this QTree
         """
         return deepcopy(self)
+
+    def calculate_similarity(self, other: "QTree") -> float:
+        """
+        Calculate similarity between this circuit and another circuit
+
+        Args:
+            other: Another QTree object to compare with
+
+        Returns:
+            Float value between 0.0 and 1.0, where 1.0 means identical circuits
+            and 0.0 means completely different circuits.
+        """
+        if not isinstance(other, QTree):
+            raise TypeError(f"Expected {type(self)} instance, got {type(other)}")
+
+        if self.num_qubits != other.num_qubits or self.max_depth != other.max_depth:
+            return 0.0
+
+        matched_positions = 0
+        total_positions = 0
+
+        for qubit in range(self.num_qubits):
+            for depth in range(self.max_depth):
+                total_positions += 1
+
+                node_self = self._get_node(qubit, depth)
+                node_other = other._get_node(qubit, depth)
+
+                # Check if same gate exists at same position
+                if (node_self is None and node_other is None) or (
+                    node_self is not None
+                    and node_other is not None
+                    and node_self.gate_type == node_other.gate_type
+                ):
+                    matched_positions += 1
+
+        if total_positions > 0:
+            return matched_positions / total_positions
+        return 0.0
 
     def _to_qiskit(self) -> QuantumCircuit:
         """
