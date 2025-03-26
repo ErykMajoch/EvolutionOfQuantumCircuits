@@ -2,11 +2,11 @@ import numpy as np
 
 
 def tournament_selection(
-        population: np.array,
-        fitness_scores: np.array,
-        generation: int,
-        max_generations: int,
-        base_tournament_size: int,
+    population: np.array,
+    fitness_scores: np.array,
+    generation: int,
+    max_generations: int,
+    base_tournament_size: int,
 ) -> np.array:
     """
     Select individuals from the population using tournament selection
