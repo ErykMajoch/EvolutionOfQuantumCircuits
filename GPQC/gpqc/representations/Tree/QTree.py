@@ -74,7 +74,7 @@ class QTree(CircuitRepresentation):
 
         for _ in range(max_mutations):
             if np.random.random() > mutation_rate:
-                return
+                continue
             qubit = np.random.randint(0, self.num_qubits)
             depth = np.random.randint(0, self.max_depth)
             match mutation_type:
