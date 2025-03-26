@@ -1,4 +1,4 @@
-# Evolutionary Evolution of Quantum Circuits
+# Genetic Evolution of Quantum Circuits
 
 COM3610 Evolutionary Optimization of Quantum Circuits for Automated Circuit Design Dissertation
 
