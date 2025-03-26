@@ -303,8 +303,8 @@ class GPQC:
 
                 child = parent1.crossover(parent2, crossover_rate)
                 mutation_type = random.choices(
-                    ["replace", "parameter", "delete"],
-                    weights=[0.5, 0.3, 0.2],
+                    ["replace", "parameter", "insert", "delete"],
+                    weights=[0.5, 0.3, 0.1, 0.1],
                 )[0]
 
                 child.mutate(

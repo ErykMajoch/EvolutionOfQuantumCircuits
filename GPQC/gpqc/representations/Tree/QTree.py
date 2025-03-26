@@ -90,11 +90,20 @@ class QTree(CircuitRepresentation):
                             ) * np.random.uniform(-np.pi / 2, np.pi / 2)
                             node.params["angle"] = (angle + adjustment) % (2 * np.pi)
                             self._replace_gate(qubit, depth, node)
+                case "insert":
+                    empty_mask = np.equal(self.nodes, None)
+                    if np.any(empty_mask):
+                        empty_indices = np.where(empty_mask)
+                        random_idx = np.random.randint(len(empty_indices[0]))
+                        insert_qubit = empty_indices[0][random_idx]
+                        insert_depth = empty_indices[1][random_idx]
+                        new_node = self._generate_random_node(insert_qubit)
+                        self._replace_gate(insert_qubit, insert_depth, new_node)
                 case "delete":
                     self._replace_gate(qubit, depth, None)
                 case _:
                     raise ValueError(
-                        f"Invalid mutation type: {mutation_type}. Supported types are 'replace', 'parameter' and 'delete'"
+                        f"Invalid mutation type: {mutation_type}. Supported types are 'replace', 'parameter', 'insert' and 'delete'"
                     )
         self._validate_and_fix_circuit()
 
