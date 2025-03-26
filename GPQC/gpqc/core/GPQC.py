@@ -38,6 +38,8 @@ class GPQC:
         avg_fitness_history: List tracking average fitness per generation
         current_generation: Current generation number
         adaptive_rate: Adaptive rate for crossover and mutation operations
+        stagnation_counter: Counter to track how many consecutive generations have experienced stagnation
+        recently_stagnated: Boolean flag to indicate if the algorithm recently restarted due to stagnation
     """
 
     def __init__(
@@ -93,6 +95,9 @@ class GPQC:
     def initialise_population(self, population_size: int) -> None:
         """
         Initialise the population with random quantum circuits of given representation
+
+        Args:
+            population_size: The population size to initialise
         """
         self.population = np.array(
             [
@@ -161,12 +166,8 @@ class GPQC:
 
         for generation in range(self.max_generations):
             self.current_generation = generation
-            # print(
-            #     f"Generation: {self.current_generation} Stagnation counter: {self.stagnation_counter}"
-            # )
 
             if self.current_generation == 0 or self.recently_stagnated:
-                # print(f"Evaluating population!")
                 self.evaluate_population()
                 self.recently_stagnated = False
 
