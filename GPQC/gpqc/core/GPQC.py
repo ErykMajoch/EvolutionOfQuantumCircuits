@@ -1,5 +1,4 @@
 import random
-from copy import deepcopy
 from typing import Dict, Optional, Tuple, Any, Type
 
 import matplotlib.pyplot as plt
@@ -42,9 +41,9 @@ class GPQC:
     """
 
     def __init__(
-            self,
-            requirements: Dict[str, Any],
-            repr_class: Optional[Type[CircuitRepresentation]] = QTree,
+        self,
+        requirements: Dict[str, Any],
+        repr_class: Optional[Type[CircuitRepresentation]] = QTree,
     ):
         """
         Initialise the GPQC evolutionary algorithm class
@@ -88,8 +87,10 @@ class GPQC:
         self.avg_fitness_history = []
         self.current_generation = 0
         self.adaptive_rate = 0.0
+        self.stagnation_counter = 0
+        self.recently_stagnated = False
 
-    def initialise_population(self) -> None:
+    def initialise_population(self, population_size: int) -> None:
         """
         Initialise the population with random quantum circuits of given representation
         """
@@ -101,7 +102,7 @@ class GPQC:
                     gate_set=self.gate_set,
                     gate_probs=self.gate_probs,
                 )
-                for _ in range(self.population_size)
+                for _ in range(population_size)
             ]
         )
         for individual in self.population:
@@ -146,7 +147,7 @@ class GPQC:
         Args:
             plot_results: Whether to plot fitness progress (default: False)
         """
-        self.initialise_population()
+        self.initialise_population(self.population_size)
 
         self.best_individual = None
         self.best_fitness = 0.0
@@ -155,12 +156,44 @@ class GPQC:
         self.avg_fitness_history = []
         self.current_generation = 0
         self.adaptive_rate = 0.0
+        self.stagnation_counter = 0
+        self.recently_stagnated = False
 
         for generation in range(self.max_generations):
             self.current_generation = generation
+            # print(
+            #     f"Generation: {self.current_generation} Stagnation counter: {self.stagnation_counter}"
+            # )
 
-            if self.current_generation == 0:
+            if self.current_generation == 0 or self.recently_stagnated:
+                # print(f"Evaluating population!")
                 self.evaluate_population()
+                self.recently_stagnated = False
+
+            if (
+                self.current_generation > 50
+                and abs(self.best_fitness - self.best_fitness_history[-50]) < 0.001
+            ):
+                self.stagnation_counter += 1
+            else:
+                self.stagnation_counter = 0
+
+            if self.stagnation_counter >= 50:
+                print(
+                    f"Restarting at generation {self.current_generation + 1} due to stagnation"
+                )
+                elite_count = max(1, self.population_size // 10)
+                elite_indices = np.argsort(self.fitness_scores)[-elite_count:]
+                elite = np.array(
+                    [self.population[i].replicate() for i in elite_indices]
+                )
+                self.initialise_population(self.population_size - elite_count)
+                self.population = np.append(self.population, elite)
+
+                self.recently_stagnated = True
+                self.stagnation_counter = 0
+
+                continue
 
             parents = self.select_parents()
 
@@ -173,9 +206,9 @@ class GPQC:
             )
 
             # Create new population
-            elite_count = max(1, int(0.1 * self.population_size))
+            elite_count = max(1, self.population_size // 10)
             elite_indices = np.argsort(self.fitness_scores)[-elite_count:]
-            new_population = [deepcopy(self.population[i]) for i in elite_indices]
+            new_population = [self.population[i].replicate() for i in elite_indices]
 
             while len(new_population) < self.population_size:
                 parent_indices = np.random.choice(len(parents), 2, replace=False)
@@ -203,13 +236,14 @@ class GPQC:
             best_index = np.argmax(self.fitness_scores)
             best_fitness = self.fitness_scores[best_index]
 
-            if best_fitness > self.best_fitness:
-                self.best_fitness = best_fitness
-                self.best_individual = deepcopy(self.population[best_index])
+            self.best_fitness_history.append(best_fitness)
 
             if plot_results:
-                self.best_fitness_history.append(best_fitness)
                 self.avg_fitness_history.append(np.mean(self.fitness_scores))
+
+            if best_fitness > self.best_fitness:
+                self.best_fitness = best_fitness
+                self.best_individual = self.population[best_index].replicate()
 
             # Check termination condition
             if self.best_fitness >= self.fitness_threshold:
@@ -256,7 +290,7 @@ class GPQC:
             gate: SUPPORTED_GATES[gate]
             for gate in gate_set
             if gate in SUPPORTED_GATES
-               and SUPPORTED_GATES[gate]["num_qubits"] <= self.num_qubits
+            and SUPPORTED_GATES[gate]["num_qubits"] <= self.num_qubits
         }
 
         if available_gates == {}:
