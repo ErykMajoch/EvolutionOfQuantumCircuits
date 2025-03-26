@@ -71,7 +71,7 @@ class TestGPQC(unittest.TestCase):
     def test_initialise_population(self):
         """Test population initialisation creates correct population"""
         gp = GPQC(self.requirements)
-        gp.initialise_population()
+        gp.initialise_population(gp.population_size)
 
         self.assertEqual(len(gp.population), 10)
 
@@ -85,7 +85,7 @@ class TestGPQC(unittest.TestCase):
     def test_evaluate_population(self):
         """Test population evaluation calculates fitness scores correctly"""
         gp = GPQC(self.requirements)
-        gp.initialise_population()
+        gp.initialise_population(gp.population_size)
         gp.evaluate_population()
 
         self.assertEqual(len(gp.fitness_scores), 10)
@@ -97,7 +97,7 @@ class TestGPQC(unittest.TestCase):
     def test_select_parents_tournament(self):
         """Test tournament selection returns correct number of parents"""
         gp = GPQC(self.requirements)
-        gp.initialise_population()
+        gp.initialise_population(gp.population_size)
         gp.evaluate_population()
         parents = gp.select_parents()
 
@@ -147,7 +147,7 @@ class TestGPQC(unittest.TestCase):
 
         self.assertIsNone(gp.get_best_circuit())
 
-        gp.initialise_population()
+        gp.initialise_population(gp.population_size)
         gp.best_individual = gp.population[0]
 
         best_circuit = gp.get_best_circuit()
@@ -162,7 +162,51 @@ class TestGPQC(unittest.TestCase):
 
         requirements = self.requirements.copy()
         gp = GPQC(requirements, repr_class=MockRepresentation)
-        gp.initialise_population()
+        gp.initialise_population(gp.population_size)
 
         for individual in gp.population:
             self.assertIsInstance(individual, MockRepresentation)
+
+    def test_calculate_diversity(self):
+        """Test diversity calculation returns values in correct range and responds to population changes"""
+        gp = GPQC(self.requirements)
+        gp.initialise_population(gp.population_size)
+
+        diversity = gp.calculate_diversity()
+        self.assertGreaterEqual(diversity, 0.0)
+        self.assertLessEqual(diversity, 1.0)
+
+        sample_individual = gp.population[0].replicate()
+        identical_population = np.array(
+            [sample_individual.replicate() for _ in range(gp.population_size)]
+        )
+
+        original_population = gp.population
+        gp.population = identical_population
+
+        low_diversity = gp.calculate_diversity()
+        self.assertLess(low_diversity, 0.1)
+
+        gp.population = original_population
+        higher_diversity = gp.calculate_diversity()
+        self.assertGreater(higher_diversity, low_diversity)
+
+    def test_apply_fitness_sharing(self):
+        """Test that fitness sharing reduces fitness of similar individuals"""
+        gp = GPQC(self.requirements)
+        gp.initialise_population(gp.population_size)
+        gp.evaluate_population()
+
+        original_fitness = gp.fitness_scores.copy()
+
+        identical_individual = gp.population[0].replicate()
+        gp.population[1] = identical_individual
+
+        shared_fitness = gp.apply_fitness_sharing()
+
+        for i in range(len(shared_fitness)):
+            self.assertLessEqual(shared_fitness[i], original_fitness[i])
+
+        self.assertLess(shared_fitness[0], original_fitness[0])
+        self.assertLess(shared_fitness[1], original_fitness[1])
+        self.assertLess(np.sum(shared_fitness), np.sum(original_fitness))

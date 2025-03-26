@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Dict, Any
 
 import numpy as np
+from qiskit import QuantumCircuit
 
 
 class CircuitRepresentation(ABC):
@@ -89,15 +90,20 @@ class CircuitRepresentation(ABC):
         """
         pass
 
-    # @abstractmethod
-    # def to_qiskit(self) -> QuantumCircuit:
-    #     """
-    #     Convert this circuit representation to a Qiskit QuantumCircuit object
-    #
-    #     Returns:
-    #         Qiskit QuantumCircuit representing this circuit
-    #     """
-    #     pass
+    @abstractmethod
+    def calculate_similarity(self, other: "CircuitRepresentation") -> float:
+        """
+        Calculate similarity between this circuit and another circuit.
 
-    # def get_unitary(self) -> np.array:
-    #     return self.unitary_matrix
+        Args:
+            other: Another CircuitRepresentation object to compare with
+
+        Returns:
+            Float value between 0.0 and 1.0, where 1.0 means identical circuits
+            and 0.0 means completely different circuits.
+        """
+        pass
+
+    @abstractmethod
+    def _to_qiskit(self) -> QuantumCircuit:
+        pass

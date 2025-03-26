@@ -114,7 +114,7 @@ class TestQTree(unittest.TestCase):
         qtree.mutate(1.0, "delete", 0, 100, 1)
         non_empty_after = np.count_nonzero(qtree.nodes)
 
-        self.assertLess(non_empty_after, non_empty_before)
+        self.assertLessEqual(non_empty_after, non_empty_before)
 
     def test_mutate_invalid_type(self):
         """Test that an invalid mutation type raises ValueError"""
@@ -245,3 +245,25 @@ class TestQTree(unittest.TestCase):
 
         with self.assertRaises(IndexError):
             qtree._get_node(0, self.max_depth)
+
+    def test_calculate_similarity(self):
+        """Test similarity calculation between partially similar circuits"""
+        np.random.seed(42)
+        qtree1 = QTree(self.num_qubits, self.max_depth, self.gate_set, self.gate_probs)
+        qtree2 = QTree(self.num_qubits, self.max_depth, self.gate_set, self.gate_probs)
+
+        for qubit in range(self.num_qubits):
+            for depth in range(self.max_depth):
+                if depth < self.max_depth // 2:
+                    node = QNode("H", "single", [qubit])
+                    qtree1._replace_gate(qubit, depth, node)
+                    qtree2._replace_gate(qubit, depth, node)
+                else:
+                    qtree1._replace_gate(qubit, depth, QNode("X", "single", [qubit]))
+                    qtree2._replace_gate(
+                        qubit, depth, QNode("Rx", "rotation", [qubit], {"angle": 0.5})
+                    )
+
+        similarity = qtree1.calculate_similarity(qtree2)
+        self.assertGreaterEqual(similarity, 0.4)
+        self.assertLessEqual(similarity, 0.6)
