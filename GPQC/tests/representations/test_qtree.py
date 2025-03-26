@@ -13,13 +13,23 @@ class TestQTree(unittest.TestCase):
         """Set up test parameters used across tests"""
         self.num_qubits = 3
         self.max_depth = 5
-        self.gate_set = {"H": 1.0, "X": 0.8, "Rx": 1.0, "CX": 0.8}
+        self.gate_set = {
+            "H": {"category": "single", "num_qubits": 1},
+            "X": {"category": "single", "num_qubits": 1},
+            "Rx": {"category": "rotation", "num_qubits": 1},
+            "CX": {"category": "controlled", "num_qubits": 2},
+        }
+        self.gate_probs = np.array([0.3, 0.2, 0.3, 0.2])
         self.random_gate_prob = 0.7
 
-    def test_initialization(self):
+    def test_initialisation(self):
         """Test proper initialisation of QTree"""
         qtree = QTree(
-            self.num_qubits, self.max_depth, self.gate_set, self.random_gate_prob
+            self.num_qubits,
+            self.max_depth,
+            self.gate_set,
+            self.gate_probs,
+            self.random_gate_prob,
         )
 
         self.assertEqual(qtree.num_qubits, self.num_qubits)
@@ -31,7 +41,11 @@ class TestQTree(unittest.TestCase):
         """Test random circuit generation with appropriate node population"""
         np.random.seed(42)
         qtree = QTree(
-            self.num_qubits, self.max_depth, self.gate_set, self.random_gate_prob
+            self.num_qubits,
+            self.max_depth,
+            self.gate_set,
+            self.gate_probs,
+            self.random_gate_prob,
         )
         qtree.generate_random_circuit()
 
@@ -48,7 +62,11 @@ class TestQTree(unittest.TestCase):
         """Test that gate replacement mutation changes the circuit appropriately"""
         np.random.seed(42)
         qtree = QTree(
-            self.num_qubits, self.max_depth, self.gate_set, self.random_gate_prob
+            self.num_qubits,
+            self.max_depth,
+            self.gate_set,
+            self.gate_probs,
+            self.random_gate_prob,
         )
 
         qtree.generate_random_circuit()
@@ -60,7 +78,9 @@ class TestQTree(unittest.TestCase):
     def test_mutate_parameter(self):
         """Test that parameter mutation changes gate parameters correctly"""
         np.random.seed(42)
-        qtree = QTree(self.num_qubits, self.max_depth, {"Rx": 1.0}, 1.0)
+        gate_set = {"Rx": {"category": "rotation", "num_qubits": 1}}
+        gate_probs = np.array([1.0])
+        qtree = QTree(self.num_qubits, self.max_depth, gate_set, gate_probs, 1.0)
         qtree.generate_random_circuit()
 
         param_nodes = []
@@ -85,7 +105,9 @@ class TestQTree(unittest.TestCase):
     def test_mutate_delete(self):
         """Test that delete mutation removes gates from the circuit"""
         np.random.seed(42)
-        qtree = QTree(self.num_qubits, self.max_depth, self.gate_set, 1.0)
+        qtree = QTree(
+            self.num_qubits, self.max_depth, self.gate_set, self.gate_probs, 1.0
+        )
         qtree.generate_random_circuit()
 
         non_empty_before = np.count_nonzero(qtree.nodes)
@@ -96,7 +118,7 @@ class TestQTree(unittest.TestCase):
 
     def test_mutate_invalid_type(self):
         """Test that an invalid mutation type raises ValueError"""
-        qtree = QTree(self.num_qubits, self.max_depth, self.gate_set)
+        qtree = QTree(self.num_qubits, self.max_depth, self.gate_set, self.gate_probs)
 
         with self.assertRaises(ValueError):
             qtree.mutate(1.0, "invalid_type", 0, 100, 1)
@@ -104,10 +126,10 @@ class TestQTree(unittest.TestCase):
     def test_crossover(self):
         """Test that crossover creates a valid offspring combining parent circuits"""
         np.random.seed(42)
-        qtree1 = QTree(self.num_qubits, self.max_depth, self.gate_set)
+        qtree1 = QTree(self.num_qubits, self.max_depth, self.gate_set, self.gate_probs)
         qtree1.generate_random_circuit()
 
-        qtree2 = QTree(self.num_qubits, self.max_depth, self.gate_set)
+        qtree2 = QTree(self.num_qubits, self.max_depth, self.gate_set, self.gate_probs)
         qtree2.generate_random_circuit()
 
         offspring = qtree1.crossover(qtree2, 0)
@@ -120,20 +142,20 @@ class TestQTree(unittest.TestCase):
         for qubit in range(self.num_qubits):
             for depth in range(self.max_depth):
                 if (
-                        offspring.nodes[qubit, depth] is not None
-                        and qtree1.nodes[qubit, depth] is None
+                    offspring.nodes[qubit, depth] is not None
+                    and qtree1.nodes[qubit, depth] is None
                 ) or (
-                        offspring.nodes[qubit, depth] is None
-                        and qtree1.nodes[qubit, depth] is not None
+                    offspring.nodes[qubit, depth] is None
+                    and qtree1.nodes[qubit, depth] is not None
                 ):
                     diff_from_parent1 = True
 
                 if (
-                        offspring.nodes[qubit, depth] is not None
-                        and qtree2.nodes[qubit, depth] is None
+                    offspring.nodes[qubit, depth] is not None
+                    and qtree2.nodes[qubit, depth] is None
                 ) or (
-                        offspring.nodes[qubit, depth] is None
-                        and qtree2.nodes[qubit, depth] is not None
+                    offspring.nodes[qubit, depth] is None
+                    and qtree2.nodes[qubit, depth] is not None
                 ):
                     diff_from_parent2 = True
 
@@ -142,7 +164,7 @@ class TestQTree(unittest.TestCase):
     def test_replicate(self):
         """Test that replication creates an identical but independent copy"""
         np.random.seed(42)
-        qtree = QTree(self.num_qubits, self.max_depth, self.gate_set)
+        qtree = QTree(self.num_qubits, self.max_depth, self.gate_set, self.gate_probs)
         qtree.generate_random_circuit()
 
         replica = qtree.replicate()
@@ -159,7 +181,7 @@ class TestQTree(unittest.TestCase):
 
         # Verify it's a deep copy by modifying the original
         if qtree.nodes[0, 0] is None:
-            qtree.nodes[0, 0] = QNode("h", "single", [0])
+            qtree.nodes[0, 0] = QNode("H", "single", [0])
         else:
             qtree.nodes[0, 0] = None
 
@@ -168,10 +190,10 @@ class TestQTree(unittest.TestCase):
     def test_to_qiskit(self):
         """Test conversion to Qiskit circuit produces valid QuantumCircuit objects"""
         np.random.seed(42)
-        qtree = QTree(self.num_qubits, self.max_depth, self.gate_set)
+        qtree = QTree(self.num_qubits, self.max_depth, self.gate_set, self.gate_probs)
         qtree.generate_random_circuit()
 
-        qiskit_circuit = qtree.to_qiskit()
+        qiskit_circuit = qtree._to_qiskit()
 
         self.assertIsInstance(qiskit_circuit, QuantumCircuit)
         self.assertEqual(qiskit_circuit.num_qubits, self.num_qubits)
@@ -179,7 +201,9 @@ class TestQTree(unittest.TestCase):
     def test_validate_and_fix_circuit(self):
         """Test that circuit validation resolves conflicts between gates"""
         np.random.seed(42)
-        qtree = QTree(self.num_qubits, self.max_depth, {"CX": 1.0}, 1.0)
+        gate_set = {"CX": {"category": "controlled", "num_qubits": 2}}
+        gate_probs = np.array([1.0])
+        qtree = QTree(self.num_qubits, self.max_depth, gate_set, gate_probs, 1.0)
         qtree.generate_random_circuit()
 
         controlled_node = QNode("CX", "controlled", [0], {"control_qubits": [1]})
@@ -191,9 +215,9 @@ class TestQTree(unittest.TestCase):
 
     def test_replace_gate(self):
         """Test that gates can be correctly replaced or removed at specific positions"""
-        qtree = QTree(self.num_qubits, self.max_depth, self.gate_set)
+        qtree = QTree(self.num_qubits, self.max_depth, self.gate_set, self.gate_probs)
 
-        node = QNode("h", "single", [0])
+        node = QNode("H", "single", [0])
         qtree._replace_gate(0, 0, node)
         self.assertEqual(qtree.nodes[0, 0], node)
 
@@ -208,9 +232,9 @@ class TestQTree(unittest.TestCase):
 
     def test_get_node(self):
         """Test that nodes can be correctly retrieved from specific positions"""
-        qtree = QTree(self.num_qubits, self.max_depth, self.gate_set)
+        qtree = QTree(self.num_qubits, self.max_depth, self.gate_set, self.gate_probs)
 
-        node = QNode("h", "single", [0])
+        node = QNode("H", "single", [0])
         qtree.nodes[0, 0] = node
 
         retrieved_node = qtree._get_node(0, 0)
