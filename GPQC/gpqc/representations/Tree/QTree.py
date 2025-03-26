@@ -1,10 +1,11 @@
 import random
 from copy import deepcopy
-from typing import Optional, Tuple, Set
+from typing import Optional, Tuple, Set, Dict, Any
 
 import numpy as np
 import treelib
 from qiskit.circuit import QuantumCircuit
+from qiskit.quantum_info import Operator
 
 from gpqc.representations.Base import CircuitRepresentation
 from gpqc.representations.Gates import QISKIT_GATES
@@ -20,11 +21,12 @@ class QTree(CircuitRepresentation):
     """
 
     def __init__(
-            self,
-            num_qubits: int,
-            max_depth: int,
-            gate_set: dict,
-            random_gate_prob: float = 0.7,
+        self,
+        num_qubits: int,
+        max_depth: int,
+        gate_set: Dict[str, Any],
+        gate_probs: np.array,
+        random_gate_prob: float = 0.7,
     ):
         """
         Initialise a tree-based quantum circuit representation.
@@ -35,7 +37,7 @@ class QTree(CircuitRepresentation):
             gate_set: Dictionary mapping gate names to their selection weights
             random_gate_prob: Probability of adding a gate at each position
         """
-        super().__init__(num_qubits, max_depth, gate_set, random_gate_prob)
+        super().__init__(num_qubits, max_depth, gate_set, gate_probs, random_gate_prob)
         self.nodes = np.ndarray((num_qubits, max_depth), dtype=QNode)
 
     def generate_random_circuit(self) -> None:
@@ -52,12 +54,12 @@ class QTree(CircuitRepresentation):
         self._validate_and_fix_circuit()
 
     def mutate(
-            self,
-            mutation_rate: float,
-            mutation_type: str,
-            generation: int,
-            max_generations: int,
-            max_mutations: int = 1,
+        self,
+        mutation_rate: float,
+        mutation_type: str,
+        generation: int,
+        max_generations: int,
+        max_mutations: int = 1,
     ) -> None:
         """
         Apply mutation operations to the circuit
@@ -81,12 +83,13 @@ class QTree(CircuitRepresentation):
                     self._replace_gate(qubit, depth, new_node)
                 case "parameter":
                     node = self._get_node(qubit, depth)
-                    if angle := node.params.get("angle", None):
-                        adjustment = (
-                                             1 - generation / max_generations
-                                     ) * np.random.uniform(-np.pi / 2, np.pi / 2)
-                        node.params["angle"] = (angle + adjustment) % (2 * np.pi)
-                        self._replace_gate(qubit, depth, node)
+                    if node:
+                        if angle := node.params.get("angle", None):
+                            adjustment = (
+                                1 - generation / max_generations
+                            ) * np.random.uniform(-np.pi / 2, np.pi / 2)
+                            node.params["angle"] = (angle + adjustment) % (2 * np.pi)
+                            self._replace_gate(qubit, depth, node)
                 case "delete":
                     self._replace_gate(qubit, depth, None)
                 case _:
@@ -128,7 +131,7 @@ class QTree(CircuitRepresentation):
         """
         return deepcopy(self)
 
-    def to_qiskit(self) -> QuantumCircuit:
+    def _to_qiskit(self) -> QuantumCircuit:
         """
         Convert this circuit representation to a Qiskit QuantumCircuit object
 
@@ -243,6 +246,9 @@ class QTree(CircuitRepresentation):
 
             checked_nodes.add((current_node, depth))
             dependent_nodes = self._get_dependent_nodes()
+
+        self.qiskit_circuit = self._to_qiskit()
+        self.unitary_matrix = Operator(self.qiskit_circuit).data
 
     def _get_node(self, qubit: int, depth: int) -> Optional[QNode]:
         """
