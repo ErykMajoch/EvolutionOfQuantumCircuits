@@ -103,7 +103,7 @@ class QTree(CircuitRepresentation):
                     self._replace_gate(qubit, depth, None)
                 case _:
                     raise ValueError(
-                        f"Invalid mutation type: {mutation_type}. Supported types are 'replace', 'parameter' and 'delete'"
+                        f"Invalid mutation type: {mutation_type}. Supported types are 'replace', 'parameter', 'insert' and 'delete'"
                     )
         self._validate_and_fix_circuit()
 
