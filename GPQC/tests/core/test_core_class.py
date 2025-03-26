@@ -71,7 +71,7 @@ class TestGPQC(unittest.TestCase):
     def test_initialise_population(self):
         """Test population initialisation creates correct population"""
         gp = GPQC(self.requirements)
-        gp.initialise_population()
+        gp.initialise_population(gp.population_size)
 
         self.assertEqual(len(gp.population), 10)
 
@@ -85,7 +85,7 @@ class TestGPQC(unittest.TestCase):
     def test_evaluate_population(self):
         """Test population evaluation calculates fitness scores correctly"""
         gp = GPQC(self.requirements)
-        gp.initialise_population()
+        gp.initialise_population(gp.population_size)
         gp.evaluate_population()
 
         self.assertEqual(len(gp.fitness_scores), 10)
@@ -97,7 +97,7 @@ class TestGPQC(unittest.TestCase):
     def test_select_parents_tournament(self):
         """Test tournament selection returns correct number of parents"""
         gp = GPQC(self.requirements)
-        gp.initialise_population()
+        gp.initialise_population(gp.population_size)
         gp.evaluate_population()
         parents = gp.select_parents()
 
@@ -147,7 +147,7 @@ class TestGPQC(unittest.TestCase):
 
         self.assertIsNone(gp.get_best_circuit())
 
-        gp.initialise_population()
+        gp.initialise_population(gp.population_size)
         gp.best_individual = gp.population[0]
 
         best_circuit = gp.get_best_circuit()
@@ -162,7 +162,7 @@ class TestGPQC(unittest.TestCase):
 
         requirements = self.requirements.copy()
         gp = GPQC(requirements, repr_class=MockRepresentation)
-        gp.initialise_population()
+        gp.initialise_population(gp.population_size)
 
         for individual in gp.population:
             self.assertIsInstance(individual, MockRepresentation)

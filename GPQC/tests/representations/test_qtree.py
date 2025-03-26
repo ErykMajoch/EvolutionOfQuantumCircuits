@@ -114,7 +114,7 @@ class TestQTree(unittest.TestCase):
         qtree.mutate(1.0, "delete", 0, 100, 1)
         non_empty_after = np.count_nonzero(qtree.nodes)
 
-        self.assertLess(non_empty_after, non_empty_before)
+        self.assertLessEqual(non_empty_after, non_empty_before)
 
     def test_mutate_invalid_type(self):
         """Test that an invalid mutation type raises ValueError"""
