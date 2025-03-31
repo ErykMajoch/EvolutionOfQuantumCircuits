@@ -4,9 +4,10 @@ from typing import Dict, Optional, Tuple, Any, Type
 import matplotlib.pyplot as plt
 import numpy as np
 from qiskit import QuantumCircuit
+from qiskit.quantum_info import Operator
 
 from gpqc.algorithms.selection import tournament_selection
-from gpqc.evaluation.evaluation_functions import matrix_similarity
+from gpqc.evaluation.fitness_functions import state_fidelity_fitness
 from gpqc.representations.Base import CircuitRepresentation
 from gpqc.representations.Gates import SUPPORTED_GATES
 from gpqc.representations.Tree.QTree import QTree
@@ -30,17 +31,21 @@ class GPQC:
         gate_set: Dictionary of available gates and their properties
         gate_probs: Array of normalized probabilities for gate selection
         target_matrix: Target unitary matrix to approximate
-        representation_class: Circuit representation class to use
-        population: Array of circuit individuals
-        best_individual: Best circuit found during evolution
-        best_fitness: Highest fitness value achieved
-        fitness_scores: Array of fitness scores for the current population
-        best_fitness_history: List tracking best fitness per generation
-        avg_fitness_history: List tracking average fitness per generation
-        current_generation: Current generation number
-        adaptive_rate: Adaptive rate for crossover and mutation operations
-        stagnation_counter: Counter to track how many consecutive generations have experienced stagnation
-        recently_stagnated: Boolean flag to indicate if the algorithm recently restarted due to stagnation
+        target_operator: Qiskit Operator representation of the target quantum operation.
+        representation_class: Circuit representation class used to model the population (e.g., QTree).
+        population: Array of quantum circuit individuals representing the current population.
+        best_individual: The best quantum circuit individual found during the evolutionary process.
+        best_fitness: The highest fitness score achieved in the evolution.
+        fitness_scores: Array storing the fitness scores of the current population.
+        best_fitness_history: List tracking the best fitness scores over all generations.
+        avg_fitness_history: List tracking the average fitness scores over all generations.
+        current_generation: Integer value indicating the generation number in evolution.
+        adaptive_rate: Dynamically calculated rate for scaling crossover and mutation probabilities.
+        stagnation_counter: Counts the number of consecutive stagnant generations.
+        recently_stagnated: Boolean flag indicating if the evolutionary process was recently restarted due to stagnation.
+        crossover_rate_history: List tracking the crossover rate value across all generations.
+        mutation_rate_history: List tracking the mutation rate value across all generations.
+        max_mutations_history: List tracking the maximum number of mutations applied over all generations.
     """
 
     def __init__(
@@ -79,7 +84,10 @@ class GPQC:
         self.gate_set, self.gate_probs = self._prepare_gate_set(
             circuit_params.get("gates", {})
         )
-        self.target_matrix = circuit_params.get("target_matrix", None)
+
+        target_matrix = circuit_params.get("target_matrix", np.ndarray([]))
+        self.target_matrix = target_matrix
+        self.target_operator = Operator(target_matrix)
 
         # Class parameters
         self.representation_class = repr_class
@@ -125,8 +133,10 @@ class GPQC:
         """
         self.fitness_scores = np.ndarray((self.population_size,), dtype=float)
         for index, individual in enumerate(self.population):
-            unitary = individual.unitary_matrix
-            self.fitness_scores[index] = matrix_similarity(unitary, self.target_matrix)
+            operator = individual.qiskit_operator
+            self.fitness_scores[index] = state_fidelity_fitness(
+                operator, self.target_operator
+            )
 
     def calculate_diversity(self) -> float:
         """
