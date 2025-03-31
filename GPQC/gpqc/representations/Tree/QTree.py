@@ -296,7 +296,7 @@ class QTree(CircuitRepresentation):
             dependent_nodes = self._get_dependent_nodes()
 
         self.qiskit_circuit = self._to_qiskit()
-        self.unitary_matrix = Operator(self.qiskit_circuit).data
+        self.qiskit_operator = Operator(self.qiskit_circuit)
 
     def _get_node(self, qubit: int, depth: int) -> Optional[QNode]:
         """

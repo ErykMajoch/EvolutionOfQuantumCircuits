@@ -28,13 +28,12 @@ class CircuitRepresentation(ABC):
     ):
         self.num_qubits = num_qubits
         self.max_depth = max_depth
-        # self.gate_set, self.gate_probs = self._prepare_gate_set(gate_set)
         self.gate_set = gate_set
         self.gate_probs = gate_probs
         self.random_gate_prob = random_gate_prob
 
         self.qiskit_circuit = None
-        self.unitary_matrix = None
+        self.qiskit_operator = None
 
     @abstractmethod
     def generate_random_circuit(self) -> None:

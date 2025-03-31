@@ -80,7 +80,7 @@ class TestGPQC(unittest.TestCase):
             self.assertEqual(individual.num_qubits, 2)
             self.assertEqual(individual.max_depth, 3)
             self.assertIsNotNone(individual.qiskit_circuit)
-            self.assertIsNotNone(individual.unitary_matrix)
+            self.assertIsNotNone(individual.qiskit_operator)
 
     def test_evaluate_population(self):
         """Test population evaluation calculates fitness scores correctly"""
