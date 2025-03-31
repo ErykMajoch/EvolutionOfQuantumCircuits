@@ -27,5 +27,5 @@ def state_fidelity_fitness(o1: Operator, o2: Operator) -> float:
         fid = np.abs(np.trace(channel.data) / input_dim) ** 2
         return np.real(fid)
     except Exception as e:
-        print(f"Error in matrix similarity calculation: {e}")
+        print(f"Error in state fidelity fitness calculation: {e}")
         return 0.0
