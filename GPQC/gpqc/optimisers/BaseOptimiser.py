@@ -14,18 +14,18 @@ class BaseOptimiser(ABC):
     def __init__(
         self,
         requirements: Dict[str, Any],
-        representation: Optional[Type[CircuitRepresentation]] = QTree,
+        representation: Type[CircuitRepresentation] = QTree,
     ):
-        gp_params = requirements.get("gp_behaviour", {})
+        ga_params = requirements.get("ga_behaviour", {})
         circuit_params = requirements.get("circuit_behaviour", {})
 
         # Evolution parameters
-        self.population_size = gp_params.get("population_size", 100)
-        termination_params = gp_params.get("termination_params", {})
+        self.population_size = ga_params.get("population_size", 100)
+        termination_params = ga_params.get("termination_params", {})
         self.max_generations = termination_params.get("max_generations", 50)
         self.fitness_threshold = termination_params.get("fitness_threshold", 0.95)
-        self.crossover_rate = gp_params.get("crossover_rate", 0.7)
-        self.mutation_rate = gp_params.get("mutation_rate", 0.3)
+        self.crossover_rate = ga_params.get("crossover_rate", 0.7)
+        self.mutation_rate = ga_params.get("mutation_rate", 0.3)
         self.mutation_types = ["replace", "parameter", "insert", "delete"]
         self.mutation_weights = [0.4, 0.3, 0.15, 0.15]
 
@@ -46,7 +46,7 @@ class BaseOptimiser(ABC):
         self.metrics_history = defaultdict(list)
 
     @abstractmethod
-    def evaluate_population(self, population: np.array = None) -> np.ndarray:
+    def evaluate_population(self, population: np.array = None) -> Optional[np.ndarray]:
         pass
 
     @abstractmethod
@@ -122,9 +122,17 @@ class BaseOptimiser(ABC):
             "max_mutations": max(
                 1, int(self.num_qubits * self.max_depth * adaptive_rate)
             ),
+            "elite_count": max(
+                3,
+                int(
+                    self.population_size
+                    * 0.05
+                    * (1 - (-self.current_generation / self.max_generations))
+                ),
+            ),
         }
 
-    def _create_offspring(self, size: int, parents: np.array) -> np.array:
+    def _create_offspring(self, parents: np.array, size: int) -> np.array:
         adaptive_rates = self._calculate_adaptive_rates()
         offspring = np.ndarray((size,), dtype=self.representation_class)
 
