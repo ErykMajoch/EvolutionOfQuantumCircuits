@@ -2,13 +2,12 @@ from typing import Dict, Any, Optional, Type
 
 import matplotlib.pyplot as plt
 import numpy as np
-from qiskit.quantum_info import Operator
 
 from gpqc.algorithms.selection import tournament_selection
 from gpqc.evaluation.fitness_functions import state_fidelity_fitness
 from gpqc.optimisers.BaseOptimiser import BaseOptimiser
 from gpqc.representations.CircuitRepresentation import CircuitRepresentation
-from gpqc.representations.QTree import QTree
+from gpqc.representations.Tree.QTree import QTree
 
 
 class SimpleGAOptimiser(BaseOptimiser):
@@ -28,13 +27,8 @@ class SimpleGAOptimiser(BaseOptimiser):
         if self.selection_method == "tournament":
             self.tournament_size = selection_params.get("tournament_size", 3)
 
-        # Circuit parameters
-        self.target_operator = Operator(self.target_matrix)
-
         # Optimiser parameters
         self.fitness_scores = np.array([], dtype=float)
-        self.stagnation_counter = 0
-        self.recently_stagnated = False
 
     def evaluate_population(self, population: np.array = None) -> Optional[np.ndarray]:
         self.fitness_scores = np.ndarray((self.population_size,), dtype=float)
@@ -103,12 +97,13 @@ class SimpleGAOptimiser(BaseOptimiser):
     def run(self, plot_results: bool = False) -> None:
         self._reset_optimiser()
         self.initialise_population(self.population_size)
+        self.evaluate_population()
 
         for generation in range(self.max_generations):
             self.current_generation = generation
 
             # Handle stagnation
-            if self.current_generation == 0 or self.recently_stagnated:
+            if self.recently_stagnated:
                 self.evaluate_population()
                 self.recently_stagnated = False
 
@@ -255,5 +250,3 @@ class SimpleGAOptimiser(BaseOptimiser):
     def _reset_optimiser(self) -> None:
         super()._reset_optimiser()
         self.fitness_scores = np.array([], dtype=float)
-        self.stagnation_counter = 0
-        self.recently_stagnated = False

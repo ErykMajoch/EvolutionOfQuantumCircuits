@@ -17,7 +17,6 @@ class CircuitRepresentation(ABC):
         random_gate_prob: Probability of adding a gate at each position
     """
 
-    @abstractmethod
     def __init__(
         self,
         num_qubits: int,

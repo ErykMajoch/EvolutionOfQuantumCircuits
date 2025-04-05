@@ -4,10 +4,11 @@ from typing import Dict, Tuple, Optional, Any, Type
 
 import numpy as np
 from qiskit import QuantumCircuit
+from qiskit.quantum_info import Operator
 
 from gpqc.representations.CircuitRepresentation import CircuitRepresentation
 from gpqc.representations.Gates import SUPPORTED_GATES
-from gpqc.representations.QTree.QTree import QTree
+from gpqc.representations.Tree.QTree import QTree
 
 
 class BaseOptimiser(ABC):
@@ -36,6 +37,7 @@ class BaseOptimiser(ABC):
             circuit_params.get("gates", {})
         )
         self.target_matrix = circuit_params.get("target_matrix", np.array([]))
+        self.target_operator = Operator(self.target_matrix)
 
         # Optimiser parameters
         self.representation_class = representation
@@ -44,6 +46,8 @@ class BaseOptimiser(ABC):
         self.best_fidelity = 0.0
         self.current_generation = 0
         self.metrics_history = defaultdict(list)
+        self.stagnation_counter = 0
+        self.recently_stagnated = False
 
     @abstractmethod
     def evaluate_population(self, population: np.array = None) -> Optional[np.ndarray]:
@@ -136,17 +140,22 @@ class BaseOptimiser(ABC):
         adaptive_rates = self._calculate_adaptive_rates()
         offspring = np.ndarray((size,), dtype=self.representation_class)
 
-        for index in range(size):
-            parent1, parent2 = np.random.choice(parents, size=2)
-            child = parent1.crossover(parent2, adaptive_rates["crossover_rate"])
+        # Pre-generate all parent pairs at once
+        parent_indices = np.random.choice(np.arange(len(parents)), size=(size, 2))
+        parent_pairs = parents[parent_indices]
 
-            mutation_type = np.random.choice(
-                self.mutation_types, p=self.mutation_weights
-            )
+        # Pre-generate all mutation types at once
+        mutation_types = np.random.choice(
+            self.mutation_types, size=size, p=self.mutation_weights
+        )
+
+        for index in range(size):
+            parent1, parent2 = parent_pairs[index]
+            child = parent1.crossover(parent2, adaptive_rates["crossover_rate"])
 
             child.mutate(
                 adaptive_rates["mutation_rate"],
-                mutation_type,
+                mutation_types[index],
                 self.current_generation,
                 self.max_generations,
                 adaptive_rates["max_mutations"],
@@ -162,3 +171,5 @@ class BaseOptimiser(ABC):
         self.best_fidelity = 0.0
         self.current_generation = 0
         self.metrics_history = defaultdict(list)
+        self.stagnation_counter = 0
+        self.recently_stagnated = False
