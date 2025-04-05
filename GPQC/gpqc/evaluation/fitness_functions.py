@@ -29,3 +29,11 @@ def state_fidelity_fitness(o1: Operator, o2: Operator) -> float:
     except Exception as e:
         print(f"Error in state fidelity fitness calculation: {e}")
         return 0.0
+
+
+def circuit_depth_fitness(depth: int, max_depth: int) -> float:
+    return depth / max_depth
+
+
+def gate_count_fitness(count: int, max_gates: int) -> float:
+    return count / max_gates

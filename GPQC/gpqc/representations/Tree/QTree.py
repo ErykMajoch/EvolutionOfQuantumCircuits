@@ -7,7 +7,7 @@ import treelib
 from qiskit.circuit import QuantumCircuit
 from qiskit.quantum_info import Operator
 
-from gpqc.representations.Base import CircuitRepresentation
+from gpqc.representations.CircuitRepresentation import CircuitRepresentation
 from gpqc.representations.Gates import QISKIT_GATES
 from gpqc.representations.Tree.QNode import QNode
 
@@ -107,16 +107,16 @@ class QTree(CircuitRepresentation):
                     )
         self._validate_and_fix_circuit()
 
-    def crossover(self, other: "QTree", crossover_rate: float = 0.7) -> "QTree":
+    def crossover(self, other: "Tree", crossover_rate: float = 0.7) -> "Tree":
         """
         Create a new circuit by combining this circuit with another
 
         Args:
-            other: Another QTree circuit to crossover with
+            other: Another Tree circuit to crossover with
             crossover_rate: Probability of performing crossover
 
         Returns:
-            A new QTree resulting from the crossover
+            A new Tree resulting from the crossover
         """
         offspring = self.replicate()
 
@@ -127,25 +127,25 @@ class QTree(CircuitRepresentation):
         depth = np.random.randint(0, self.max_depth)
 
         offspring.nodes[qubit, depth:] = other.nodes[qubit, depth:]
-        self._validate_and_fix_circuit()
+        offspring._validate_and_fix_circuit()
 
         return offspring
 
-    def replicate(self) -> "QTree":
+    def replicate(self) -> "Tree":
         """
         Create a deep copy of this circuit
 
         Returns:
-            A new identical copy of this QTree
+            A new identical copy of this Tree
         """
         return deepcopy(self)
 
-    def calculate_similarity(self, other: "QTree") -> float:
+    def calculate_similarity(self, other: "Tree") -> float:
         """
         Calculate similarity between this circuit and another circuit
 
         Args:
-            other: Another QTree object to compare with
+            other: Another Tree object to compare with
 
         Returns:
             Float value between 0.0 and 1.0, where 1.0 means identical circuits
