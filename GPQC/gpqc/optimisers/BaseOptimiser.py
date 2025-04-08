@@ -13,9 +13,9 @@ from gpqc.representations.Tree.QTree import QTree
 
 class BaseOptimiser(ABC):
     def __init__(
-        self,
-        requirements: Dict[str, Any],
-        representation: Type[CircuitRepresentation] = QTree,
+            self,
+            requirements: Dict[str, Any],
+            representation: Type[CircuitRepresentation] = QTree,
     ):
         ga_params = requirements.get("ga_behaviour", {})
         circuit_params = requirements.get("circuit_behaviour", {})
@@ -90,7 +90,7 @@ class BaseOptimiser(ABC):
             gate: SUPPORTED_GATES[gate]
             for gate in gate_set
             if gate in SUPPORTED_GATES
-            and SUPPORTED_GATES[gate]["num_qubits"] <= self.num_qubits
+               and SUPPORTED_GATES[gate]["num_qubits"] <= self.num_qubits
         }
 
         if available_gates == {}:

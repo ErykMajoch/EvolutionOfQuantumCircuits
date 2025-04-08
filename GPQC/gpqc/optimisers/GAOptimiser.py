@@ -10,11 +10,11 @@ from gpqc.representations.CircuitRepresentation import CircuitRepresentation
 from gpqc.representations.Tree.QTree import QTree
 
 
-class SimpleGAOptimiser(BaseOptimiser):
+class GAOptimiser(BaseOptimiser):
     def __init__(
-        self,
-        requirements: Dict[str, Any],
-        representation: Type[CircuitRepresentation] = QTree,
+            self,
+            requirements: Dict[str, Any],
+            representation: Type[CircuitRepresentation] = QTree,
     ) -> None:
         super().__init__(requirements, representation)
 
@@ -65,7 +65,7 @@ class SimpleGAOptimiser(BaseOptimiser):
 
                     if similarity > sharing_radius:
                         niche_count += (similarity - sharing_radius) / (
-                            1 - sharing_radius
+                                1 - sharing_radius
                         )
 
             shared_fitness[i] = self.fitness_scores[i] / max(1.0, niche_count)
@@ -108,9 +108,9 @@ class SimpleGAOptimiser(BaseOptimiser):
                 self.recently_stagnated = False
 
             if (
-                self.current_generation > 50
-                and abs(self.best_fidelity - self.metrics_history["best_fitness"][-50])
-                < 0.001
+                    self.current_generation > 50
+                    and abs(self.best_fidelity - self.metrics_history["best_fitness"][-50])
+                    < 0.001
             ):
                 self.stagnation_counter += 1
             else:
@@ -140,8 +140,8 @@ class SimpleGAOptimiser(BaseOptimiser):
             parents = self.select_parents()
 
             elite_indices = np.argsort(self.fitness_scores)[
-                -adaptive_rates["elite_count"] :
-            ]
+                            -adaptive_rates["elite_count"]:
+                            ]
             new_population = np.array(
                 [self.population[i].replicate() for i in elite_indices]
             )
