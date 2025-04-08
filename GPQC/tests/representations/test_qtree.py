@@ -165,20 +165,20 @@ class TestQTree(unittest.TestCase):
         for qubit in range(self.num_qubits):
             for depth in range(self.max_depth):
                 if (
-                    offspring.nodes[qubit, depth] is not None
-                    and qtree1.nodes[qubit, depth] is None
+                        offspring.nodes[qubit, depth] is not None
+                        and qtree1.nodes[qubit, depth] is None
                 ) or (
-                    offspring.nodes[qubit, depth] is None
-                    and qtree1.nodes[qubit, depth] is not None
+                        offspring.nodes[qubit, depth] is None
+                        and qtree1.nodes[qubit, depth] is not None
                 ):
                     diff_from_parent1 = True
 
                 if (
-                    offspring.nodes[qubit, depth] is not None
-                    and qtree2.nodes[qubit, depth] is None
+                        offspring.nodes[qubit, depth] is not None
+                        and qtree2.nodes[qubit, depth] is None
                 ) or (
-                    offspring.nodes[qubit, depth] is None
-                    and qtree2.nodes[qubit, depth] is not None
+                        offspring.nodes[qubit, depth] is None
+                        and qtree2.nodes[qubit, depth] is not None
                 ):
                     diff_from_parent2 = True
 
@@ -234,7 +234,7 @@ class TestQTree(unittest.TestCase):
         qtree.generate_random_circuit()
 
         controlled_node = QNode("CX", "controlled", [0], {
-                                "control_qubits": [1]})
+            "control_qubits": [1]})
         qtree.nodes[0, 0] = controlled_node
         qtree.nodes[1, 0] = QNode("H", "single", [1])  # Conflicting gate
         qtree._validate_and_fix_circuit()
@@ -295,7 +295,7 @@ class TestQTree(unittest.TestCase):
                         qubit, depth, QNode("X", "single", [qubit]))
                     qtree2._replace_gate(
                         qubit, depth, QNode("Rx", "rotation", [
-                                            qubit], {"angle": 0.5})
+                            qubit], {"angle": 0.5})
                     )
 
         similarity = qtree1.calculate_similarity(qtree2)

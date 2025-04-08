@@ -21,12 +21,12 @@ class QTree(CircuitRepresentation):
     """
 
     def __init__(
-        self,
-        num_qubits: int,
-        max_depth: int,
-        gate_set: Dict[str, Any],
-        gate_probs: np.array,
-        random_gate_prob: float = 0.7,
+            self,
+            num_qubits: int,
+            max_depth: int,
+            gate_set: Dict[str, Any],
+            gate_probs: np.array,
+            random_gate_prob: float = 0.7,
     ):
         """
         Initialise a tree-based quantum circuit representation.
@@ -54,12 +54,12 @@ class QTree(CircuitRepresentation):
         self._validate_and_fix_circuit()
 
     def mutate(
-        self,
-        mutation_rate: float,
-        mutation_type: str,
-        generation: int,
-        max_generations: int,
-        max_mutations: int = 1,
+            self,
+            mutation_rate: float,
+            mutation_type: str,
+            generation: int,
+            max_generations: int,
+            max_mutations: int = 1,
     ) -> None:
         """
         Apply mutation operations to the circuit
@@ -86,8 +86,8 @@ class QTree(CircuitRepresentation):
                     if node:
                         if angle := node.params.get("angle", None):
                             adjustment = (
-                                1 - generation / max_generations
-                            ) * np.random.uniform(-np.pi / 2, np.pi / 2)
+                                                 1 - generation / max_generations
+                                         ) * np.random.uniform(-np.pi / 2, np.pi / 2)
                             node.params["angle"] = (angle + adjustment) % (2 * np.pi)
                             self._replace_gate(qubit, depth, node)
                 case "insert":
@@ -169,9 +169,9 @@ class QTree(CircuitRepresentation):
 
                 # Check if same gate exists at same position
                 if (node_self is None and node_other is None) or (
-                    node_self is not None
-                    and node_other is not None
-                    and node_self.gate_type == node_other.gate_type
+                        node_self is not None
+                        and node_other is not None
+                        and node_self.gate_type == node_other.gate_type
                 ):
                     matched_positions += 1
 

@@ -18,12 +18,12 @@ class CircuitRepresentation(ABC):
     """
 
     def __init__(
-        self,
-        num_qubits: int,
-        max_depth: int,
-        gate_set: Dict[str, Any],
-        gate_probs: np.array,
-        random_gate_prob: float = 0.7,
+            self,
+            num_qubits: int,
+            max_depth: int,
+            gate_set: Dict[str, Any],
+            gate_probs: np.array,
+            random_gate_prob: float = 0.7,
     ):
         self.num_qubits = num_qubits
         self.max_depth = max_depth
@@ -43,12 +43,12 @@ class CircuitRepresentation(ABC):
 
     @abstractmethod
     def mutate(
-        self,
-        mutation_rate: float,
-        mutation_type: str,
-        generation: int,
-        max_generations: int,
-        max_mutations: int = 1,
+            self,
+            mutation_rate: float,
+            mutation_type: str,
+            generation: int,
+            max_generations: int,
+            max_mutations: int = 1,
     ) -> None:
         """
         Apply mutation operations to the circuit
@@ -64,7 +64,7 @@ class CircuitRepresentation(ABC):
 
     @abstractmethod
     def crossover(
-        self, other: "CircuitRepresentation", crossover_rate: float = 0.7
+            self, other: "CircuitRepresentation", crossover_rate: float = 0.7
     ) -> "CircuitRepresentation":
         """
         Create a new circuit by combining this circuit with another

@@ -2,7 +2,6 @@ from typing import Optional, List, Dict, Any, Type
 from uuid import uuid4
 
 import matplotlib.pyplot as plt
-
 import numpy as np
 
 from gpqc.evaluation.fitness_functions import (
@@ -17,9 +16,9 @@ from gpqc.representations.Tree.QTree import QTree
 
 class NSGA2Optimiser(BaseOptimiser):
     def __init__(
-        self,
-        requirements: Dict[str, Any],
-        representation: Type[CircuitRepresentation] = QTree,
+            self,
+            requirements: Dict[str, Any],
+            representation: Type[CircuitRepresentation] = QTree,
     ) -> None:
         super().__init__(requirements, representation)
 
@@ -104,7 +103,7 @@ class NSGA2Optimiser(BaseOptimiser):
         return [np.array(front) for front in fronts[:-1]]
 
     def calculate_crowding_distance(
-        self, fitness_matrix: np.ndarray, front_indices: np.ndarray
+            self, fitness_matrix: np.ndarray, front_indices: np.ndarray
     ) -> np.ndarray:
         front_size = len(front_indices)
         if front_size <= 2:
@@ -123,13 +122,14 @@ class NSGA2Optimiser(BaseOptimiser):
             if objective_range > 0:
                 for i in range(1, front_size - 1):
                     distances[sorted_indices[i]] += (
-                        values[sorted_indices[i + 1]] - values[sorted_indices[i - 1]]
-                    ) / objective_range
+                                                            values[sorted_indices[i + 1]] - values[
+                                                        sorted_indices[i - 1]]
+                                                    ) / objective_range
 
         return distances
 
     def calculate_all_crowding_distances(
-        self, fitness_matrix: np.ndarray, fronts: List[np.ndarray]
+            self, fitness_matrix: np.ndarray, fronts: List[np.ndarray]
     ) -> np.ndarray:
         population_size = fitness_matrix.shape[0]
         crowding_distances = np.zeros(population_size)
@@ -189,9 +189,9 @@ class NSGA2Optimiser(BaseOptimiser):
                 self.recently_stagnated = False
 
             if (
-                self.current_generation > 50
-                and abs(self.best_fidelity - self.metrics_history["best_fidelity"][-50])
-                < 0.001
+                    self.current_generation > 50
+                    and abs(self.best_fidelity - self.metrics_history["best_fidelity"][-50])
+                    < 0.001
             ):
                 self.stagnation_counter += 1
             else:
@@ -244,8 +244,8 @@ class NSGA2Optimiser(BaseOptimiser):
 
             # Add complete fronts as long as they fit
             while (
-                new_population_size + len(combined_fronts[front_index])
-                <= self.population_size
+                    new_population_size + len(combined_fronts[front_index])
+                    <= self.population_size
             ):
                 for idx in combined_fronts[front_index]:
                     new_population.append(combined_population[idx])
@@ -257,7 +257,7 @@ class NSGA2Optimiser(BaseOptimiser):
 
             # Add more individuals by crowding distance and take most diverse
             if new_population_size < self.population_size and front_index < len(
-                combined_fronts
+                    combined_fronts
             ):
                 last_front = combined_fronts[front_index]
                 crowd_distances = combined_crowding[last_front]
