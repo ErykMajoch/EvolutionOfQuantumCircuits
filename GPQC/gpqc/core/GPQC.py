@@ -3,7 +3,7 @@ from typing import Dict, Type, Optional
 from qiskit import QuantumCircuit
 
 from gpqc.optimisers.NSGA2Optimiser import NSGA2Optimiser
-from gpqc.optimisers.SimpleGAOptimiser import SimpleGAOptimiser
+from gpqc.optimisers.GAOptimiser import GAOptimiser
 from gpqc.representations.CircuitRepresentation import CircuitRepresentation
 from gpqc.representations.Tree.QTree import QTree
 
@@ -16,7 +16,7 @@ class GPQC:
 
         match self.algorithm_type:
             case "simple":
-                self.algorithm = SimpleGAOptimiser(requirements, representation)
+                self.algorithm = GAOptimiser(requirements, representation)
             case "nsga2":
                 self.algorithm = NSGA2Optimiser(requirements, representation)
             case _:

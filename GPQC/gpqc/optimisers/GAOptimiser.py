@@ -10,7 +10,7 @@ from gpqc.representations.CircuitRepresentation import CircuitRepresentation
 from gpqc.representations.Tree.QTree import QTree
 
 
-class SimpleGAOptimiser(BaseOptimiser):
+class GAOptimiser(BaseOptimiser):
     def __init__(
         self,
         requirements: Dict[str, Any],

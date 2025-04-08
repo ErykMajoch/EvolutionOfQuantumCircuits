@@ -1,4 +1,7 @@
 from typing import Optional, List, Dict, Any, Type
+from uuid import uuid4
+
+import matplotlib.pyplot as plt
 
 import numpy as np
 
@@ -187,7 +190,7 @@ class NSGA2Optimiser(BaseOptimiser):
 
             if (
                 self.current_generation > 50
-                and abs(self.best_fidelity - self.metrics_history["best_fitness"][-50])
+                and abs(self.best_fidelity - self.metrics_history["best_fidelity"][-50])
                 < 0.001
             ):
                 self.stagnation_counter += 1
@@ -276,9 +279,9 @@ class NSGA2Optimiser(BaseOptimiser):
 
             # Update the best individual based on fidelity
             first_front = self.fronts[0]
+            best_index_in_front = np.argmax(self.fitness_matrix[first_front, 0])
+            best_individual_index = first_front[best_index_in_front]
             if len(first_front) > 0:
-                best_index_in_front = np.argmax(self.fitness_matrix[first_front, 0])
-                best_individual_index = first_front[best_index_in_front]
                 current_best_fidelity = self.fitness_matrix[best_individual_index, 0]
 
                 if current_best_fidelity > self.best_fidelity:
@@ -288,9 +291,9 @@ class NSGA2Optimiser(BaseOptimiser):
                     ].replicate()
 
             # Track metrics
-            self.metrics_history["best_fitness"].append(self.best_fidelity)
-            average_fitness = np.mean(self.fitness_matrix[:, 0])
-            self.metrics_history["average_fitness"].append(average_fitness)
+            self.metrics_history["best_individual"].append(
+                np.abs(self.fitness_matrix[best_individual_index])
+            )
 
             # Track per-objective metrics
             for i, objective in enumerate(self.objectives):
@@ -312,6 +315,10 @@ class NSGA2Optimiser(BaseOptimiser):
                     average_obj_value
                 )
 
+            adaptive_rates = self._calculate_adaptive_rates()
+            for name, rate in adaptive_rates.items():
+                self.metrics_history[name].append(rate)
+
             if len(first_front) > 1:
                 front_values = self.fitness_matrix[first_front]
                 # Calculate spread as the sum of ranges in each objective
@@ -332,6 +339,7 @@ class NSGA2Optimiser(BaseOptimiser):
                 break
 
             if generation % 10 == 0:
+                average_fitness = np.mean(self.fitness_matrix[:, 0])
                 print(
                     f"Generation {self.current_generation}: "
                     f"Best fitness = {self.best_fidelity:.4f}, "
@@ -347,7 +355,206 @@ class NSGA2Optimiser(BaseOptimiser):
             self._plot_results()
 
     def _plot_results(self) -> None:
-        pass
+        fig = plt.figure(figsize=(10, 18))  # Changed dimensions to be taller than wide
+
+        # 1. Plot the best individual's objective values over generations
+        ax1 = fig.add_subplot(3, 1, 1)  # Changed to 3 rows, 1 column, position 1
+        generations = range(len(self.metrics_history["best_individual"]))
+        best_individuals = np.array(self.metrics_history["best_individual"])
+
+        # Ensure we're showing absolute values
+        best_individuals = np.abs(best_individuals)
+
+        for i, objective in enumerate(self.objectives):
+            objective_name = objective["name"]
+            ax1.plot(generations, best_individuals[:, i], label=f"{objective_name}")
+
+        ax1.set_title("Best Individual's Objective Values")
+        ax1.set_xlabel("Generation")
+        ax1.set_ylabel("Objective Value")
+        ax1.set_ylim(0, 1)  # Set y-axis range to [0,1]
+        ax1.legend()
+        ax1.grid(True)
+
+        # 2. Plot the best and average objective fitness values across generations
+        ax2 = fig.add_subplot(3, 1, 2)  # Changed to 3 rows, 1 column, position 2
+
+        # Create a multi-line plot for all objectives
+        for i, objective in enumerate(self.objectives):
+            objective_name = objective["name"]
+            # Ensure positive values for plotting
+            best_values = np.abs(self.metrics_history[f"best_{objective_name}"])
+            avg_values = np.abs(self.metrics_history[f"average_{objective_name}"])
+
+            ax2.plot(
+                generations,
+                best_values,
+                label=f"Best {objective_name}",
+                color=f"C{i}",
+                linestyle="-",
+            )
+            ax2.plot(
+                generations,
+                avg_values,
+                label=f"Avg {objective_name}",
+                color=f"C{i}",
+                linestyle="--",
+                alpha=0.7,
+            )
+
+        ax2.set_title("Best and Average Fitness Values")
+        ax2.set_xlabel("Generation")
+        ax2.set_ylabel("Fitness Value")
+        ax2.set_ylim(0, 1)  # Set y-axis range to [0,1]
+        ax2.legend()
+        ax2.grid(True)
+
+        # 3. Visualize the final Pareto front
+        # Changed to 3 rows, 1 column, position 3
+
+        if len(self.fronts) > 0 and len(self.fronts[0]) > 0:
+            # Get the front values and ensure they are positive
+            front_values = np.abs(self.fitness_matrix[self.fronts[0]])
+
+            if self.num_objectives == 2:
+                # 2D Pareto front
+                # Find fidelity index (if it exists)
+                ax3 = fig.add_subplot(3, 1, 3)
+                fidelity_idx = next(
+                    (
+                        i
+                        for i, obj in enumerate(self.objectives)
+                        if obj["name"] == "fidelity"
+                    ),
+                    0,
+                )
+                x_idx = 1 if fidelity_idx == 0 else 0
+
+                # Ensure fidelity is on y-axis
+                ax3.scatter(
+                    front_values[:, x_idx], front_values[:, fidelity_idx], c="blue"
+                )
+                ax3.set_title("Pareto Front")
+                ax3.set_xlabel(f"{self.objectives[x_idx]['name']}")
+                ax3.set_ylabel(f"{self.objectives[fidelity_idx]['name']}")
+                ax3.set_xlim(0, 1)
+                ax3.set_ylim(0, 1)
+                ax3.grid(True)
+
+            elif self.num_objectives == 3:
+                ax3 = fig.add_subplot(3, 1, 3, projection="3d")
+
+                fidelity_idx = next(
+                    (
+                        i
+                        for i, obj in enumerate(self.objectives)
+                        if obj["name"] == "fidelity"
+                    ),
+                    0,
+                )
+                second_idx, third_idx = [
+                    i for i in range(self.num_objectives) if i != fidelity_idx
+                ]
+
+                x_idx, y_idx, z_idx = second_idx, third_idx, fidelity_idx
+
+                best_idx = np.argmax(front_values[:, fidelity_idx])
+                best_point = front_values[best_idx]
+
+                # Plot all points except the best one in blue
+                other_indices = np.arange(len(front_values)) != best_idx
+                ax3.scatter(
+                    front_values[other_indices, x_idx],
+                    front_values[other_indices, y_idx],
+                    front_values[other_indices, z_idx],
+                    c="blue",
+                    label="Pareto front",
+                )
+
+                # Plot the best individual in red and with a larger size
+                ax3.scatter(
+                    front_values[best_idx, x_idx],
+                    front_values[best_idx, y_idx],
+                    front_values[best_idx, z_idx],
+                    c="red",
+                    s=100,  # Larger point size
+                    label="Best individual",
+                )
+
+                # Line to x-y plane (z=0)
+                ax3.plot(
+                    [best_point[x_idx], best_point[x_idx]],
+                    [best_point[y_idx], best_point[y_idx]],
+                    [best_point[z_idx], 0],
+                    "r--",
+                    alpha=0.7,
+                )
+
+                # Line to x-z plane (y=0)
+                ax3.plot(
+                    [best_point[x_idx], best_point[x_idx]],
+                    [best_point[y_idx], 1],
+                    [best_point[z_idx], best_point[z_idx]],
+                    "r--",
+                    alpha=0.7,
+                )
+
+                # Line to y-z plane (x=0)
+                ax3.plot(
+                    [best_point[x_idx], 0],
+                    [best_point[y_idx], best_point[y_idx]],
+                    [best_point[z_idx], best_point[z_idx]],
+                    "r--",
+                    alpha=0.7,
+                )
+
+                ax3.set_title("Pareto Front")
+                ax3.set_xlabel(f"{self.objectives[x_idx]["name"]}")
+                ax3.set_ylabel(f"{self.objectives[y_idx]["name"]}")
+                ax3.set_zlabel(f"{self.objectives[z_idx]["name"]}")
+                ax3.set_xlim(0, 1)
+                ax3.set_ylim(0, 1)
+                ax3.set_zlim(0, 1)
+                ax3.legend()
+
+            else:
+                # For more than 3 objectives, use parallel coordinates plot
+                # Reorder objectives to put fidelity first if it exists
+                ax3 = fig.add_subplot(3, 1, 3)
+                objective_order = list(range(self.num_objectives))
+                fidelity_idx = next(
+                    (
+                        i
+                        for i, obj in enumerate(self.objectives)
+                        if obj["name"] == "fidelity"
+                    ),
+                    -1,
+                )
+                if fidelity_idx != -1 and fidelity_idx != 0:
+                    objective_order[0], objective_order[fidelity_idx] = fidelity_idx, 0
+
+                # Get objective names in the correct order
+                ordered_names = [self.objectives[i]["name"] for i in objective_order]
+
+                # Plot parallel coordinates
+                for i in range(len(front_values)):
+                    xs = np.arange(self.num_objectives)
+                    ys = front_values[i, objective_order]  # Use reordered values
+                    ax3.plot(xs, ys, "b-", alpha=0.5)
+
+                ax3.set_title("Pareto Front (Parallel Coordinates)")
+                ax3.set_xticks(np.arange(self.num_objectives))
+                ax3.set_xticklabels(ordered_names)
+                ax3.set_ylim(0, 1)
+                ax3.set_ylabel("Objective Value")
+                ax3.grid(True)
+
+        plt.suptitle("NSGA-II Optimization Results", fontsize=16)
+        plt.tight_layout(rect=[0, 0, 1, 0.95])
+
+        # Save the figure
+        plt.savefig(f"nsga2_results_{uuid4()}.png", dpi=300)
+        plt.close()
 
     def _reset_optimiser(self):
         super()._reset_optimiser()
