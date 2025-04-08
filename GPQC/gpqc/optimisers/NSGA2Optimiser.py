@@ -355,14 +355,12 @@ class NSGA2Optimiser(BaseOptimiser):
             self._plot_results()
 
     def _plot_results(self) -> None:
-        fig = plt.figure(figsize=(10, 18))  # Changed dimensions to be taller than wide
+        fig = plt.figure(figsize=(10, 18))
 
         # 1. Plot the best individual's objective values over generations
-        ax1 = fig.add_subplot(3, 1, 1)  # Changed to 3 rows, 1 column, position 1
+        ax1 = fig.add_subplot(3, 1, 1)
         generations = range(len(self.metrics_history["best_individual"]))
         best_individuals = np.array(self.metrics_history["best_individual"])
-
-        # Ensure we're showing absolute values
         best_individuals = np.abs(best_individuals)
 
         for i, objective in enumerate(self.objectives):
@@ -372,17 +370,15 @@ class NSGA2Optimiser(BaseOptimiser):
         ax1.set_title("Best Individual's Objective Values")
         ax1.set_xlabel("Generation")
         ax1.set_ylabel("Objective Value")
-        ax1.set_ylim(0, 1)  # Set y-axis range to [0,1]
+        ax1.set_ylim(0, 1)
         ax1.legend()
         ax1.grid(True)
 
         # 2. Plot the best and average objective fitness values across generations
-        ax2 = fig.add_subplot(3, 1, 2)  # Changed to 3 rows, 1 column, position 2
+        ax2 = fig.add_subplot(3, 1, 2)
 
-        # Create a multi-line plot for all objectives
         for i, objective in enumerate(self.objectives):
             objective_name = objective["name"]
-            # Ensure positive values for plotting
             best_values = np.abs(self.metrics_history[f"best_{objective_name}"])
             avg_values = np.abs(self.metrics_history[f"average_{objective_name}"])
 
@@ -405,20 +401,16 @@ class NSGA2Optimiser(BaseOptimiser):
         ax2.set_title("Best and Average Fitness Values")
         ax2.set_xlabel("Generation")
         ax2.set_ylabel("Fitness Value")
-        ax2.set_ylim(0, 1)  # Set y-axis range to [0,1]
+        ax2.set_ylim(0, 1)
         ax2.legend()
         ax2.grid(True)
 
-        # 3. Visualize the final Pareto front
-        # Changed to 3 rows, 1 column, position 3
-
+        # 3. Visualise the final Pareto front
         if len(self.fronts) > 0 and len(self.fronts[0]) > 0:
-            # Get the front values and ensure they are positive
             front_values = np.abs(self.fitness_matrix[self.fronts[0]])
 
             if self.num_objectives == 2:
                 # 2D Pareto front
-                # Find fidelity index (if it exists)
                 ax3 = fig.add_subplot(3, 1, 3)
                 fidelity_idx = next(
                     (
@@ -430,7 +422,6 @@ class NSGA2Optimiser(BaseOptimiser):
                 )
                 x_idx = 1 if fidelity_idx == 0 else 0
 
-                # Ensure fidelity is on y-axis
                 ax3.scatter(
                     front_values[:, x_idx], front_values[:, fidelity_idx], c="blue"
                 )
@@ -442,6 +433,7 @@ class NSGA2Optimiser(BaseOptimiser):
                 ax3.grid(True)
 
             elif self.num_objectives == 3:
+                # 3D Pareto front
                 ax3 = fig.add_subplot(3, 1, 3, projection="3d")
 
                 fidelity_idx = next(
@@ -457,11 +449,9 @@ class NSGA2Optimiser(BaseOptimiser):
                 ]
 
                 x_idx, y_idx, z_idx = second_idx, third_idx, fidelity_idx
-
                 best_idx = np.argmax(front_values[:, fidelity_idx])
                 best_point = front_values[best_idx]
 
-                # Plot all points except the best one in blue
                 other_indices = np.arange(len(front_values)) != best_idx
                 ax3.scatter(
                     front_values[other_indices, x_idx],
@@ -471,13 +461,12 @@ class NSGA2Optimiser(BaseOptimiser):
                     label="Pareto front",
                 )
 
-                # Plot the best individual in red and with a larger size
                 ax3.scatter(
                     front_values[best_idx, x_idx],
                     front_values[best_idx, y_idx],
                     front_values[best_idx, z_idx],
                     c="red",
-                    s=100,  # Larger point size
+                    s=100,
                     label="Best individual",
                 )
 
@@ -519,7 +508,6 @@ class NSGA2Optimiser(BaseOptimiser):
 
             else:
                 # For more than 3 objectives, use parallel coordinates plot
-                # Reorder objectives to put fidelity first if it exists
                 ax3 = fig.add_subplot(3, 1, 3)
                 objective_order = list(range(self.num_objectives))
                 fidelity_idx = next(
@@ -533,13 +521,11 @@ class NSGA2Optimiser(BaseOptimiser):
                 if fidelity_idx != -1 and fidelity_idx != 0:
                     objective_order[0], objective_order[fidelity_idx] = fidelity_idx, 0
 
-                # Get objective names in the correct order
                 ordered_names = [self.objectives[i]["name"] for i in objective_order]
 
-                # Plot parallel coordinates
                 for i in range(len(front_values)):
                     xs = np.arange(self.num_objectives)
-                    ys = front_values[i, objective_order]  # Use reordered values
+                    ys = front_values[i, objective_order]
                     ax3.plot(xs, ys, "b-", alpha=0.5)
 
                 ax3.set_title("Pareto Front (Parallel Coordinates)")
@@ -552,7 +538,6 @@ class NSGA2Optimiser(BaseOptimiser):
         plt.suptitle("NSGA-II Optimization Results", fontsize=16)
         plt.tight_layout(rect=[0, 0, 1, 0.95])
 
-        # Save the figure
         plt.savefig(f"nsga2_results_{uuid4()}.png", dpi=300)
         plt.close()
 
