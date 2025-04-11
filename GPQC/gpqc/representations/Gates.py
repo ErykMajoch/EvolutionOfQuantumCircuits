@@ -40,7 +40,7 @@ SUPPORTED_GATES = {
         "category": "rotation",
     },
     # Phase gates
-    "R": {
+    "P": {
         "num_qubits": 1,
         "category": "phase",
     },
@@ -48,6 +48,10 @@ SUPPORTED_GATES = {
     "SWAP": {
         "num_qubits": 2,
         "category": "swap",
+    },
+    "CP": {
+        "num_qubits": 2,
+        "category": ["phase", "controlled"],
     },
     "CX": {
         "num_qubits": 2,
@@ -78,8 +82,9 @@ QISKIT_GATES = {
     "Rx": RXGate,
     "Ry": RYGate,
     "Rz": RZGate,
-    "R": PhaseGate,
+    "P": PhaseGate,
     "SWAP": SwapGate(),
+    "CP": CPhaseGate,
     "CX": CXGate(),
     "CY": CYGate(),
     "CZ": CZGate(),

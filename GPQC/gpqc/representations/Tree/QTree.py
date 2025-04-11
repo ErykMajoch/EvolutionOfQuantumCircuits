@@ -21,12 +21,12 @@ class QTree(CircuitRepresentation):
     """
 
     def __init__(
-            self,
-            num_qubits: int,
-            max_depth: int,
-            gate_set: Dict[str, Any],
-            gate_probs: np.array,
-            random_gate_prob: float = 0.7,
+        self,
+        num_qubits: int,
+        max_depth: int,
+        gate_set: Dict[str, Any],
+        gate_probs: np.array,
+        random_gate_prob: float = 0.7,
     ):
         """
         Initialise a tree-based quantum circuit representation.
@@ -54,12 +54,12 @@ class QTree(CircuitRepresentation):
         self._validate_and_fix_circuit()
 
     def mutate(
-            self,
-            mutation_rate: float,
-            mutation_type: str,
-            generation: int,
-            max_generations: int,
-            max_mutations: int = 1,
+        self,
+        mutation_rate: float,
+        mutation_type: str,
+        generation: int,
+        max_generations: int,
+        max_mutations: int = 1,
     ) -> None:
         """
         Apply mutation operations to the circuit
@@ -86,8 +86,8 @@ class QTree(CircuitRepresentation):
                     if node:
                         if angle := node.params.get("angle", None):
                             adjustment = (
-                                                 1 - generation / max_generations
-                                         ) * np.random.uniform(-np.pi / 2, np.pi / 2)
+                                1 - generation / max_generations
+                            ) * np.random.uniform(-np.pi / 2, np.pi / 2)
                             node.params["angle"] = (angle + adjustment) % (2 * np.pi)
                             self._replace_gate(qubit, depth, node)
                 case "insert":
@@ -169,9 +169,9 @@ class QTree(CircuitRepresentation):
 
                 # Check if same gate exists at same position
                 if (node_self is None and node_other is None) or (
-                        node_self is not None
-                        and node_other is not None
-                        and node_self.gate_type == node_other.gate_type
+                    node_self is not None
+                    and node_other is not None
+                    and node_self.gate_type == node_other.gate_type
                 ):
                     matched_positions += 1
 
@@ -193,10 +193,31 @@ class QTree(CircuitRepresentation):
             for node in layer:
                 if node:
                     gate = QISKIT_GATES[node.gate_type]
-                    if node.gate_category in ["phase", "rotation"]:
+
+                    # Handle parameterized gates
+                    if isinstance(node.gate_category, list):
+                        if (
+                            "phase" in node.gate_category
+                            and "controlled" in node.gate_category
+                        ):
+                            gate = gate(node.params.get("angle"))
+                    elif node.gate_category in ["phase", "rotation"]:
                         gate = gate(node.params.get("angle"))
-                    args = node.params.get("control_qubits", []) + node.targets
-                    circuit.append(gate, args)
+
+                    # Handle different gate types
+                    if (
+                        isinstance(node.gate_category, str)
+                        and node.gate_category == "swap"
+                    ) or (
+                        isinstance(node.gate_category, list)
+                        and "swap" in node.gate_category
+                    ):
+                        # For swap gates, we only use the target qubits (no control qubits)
+                        circuit.append(gate, node.targets)
+                    else:
+                        # For other gates, we include both control qubits and targets
+                        args = node.params.get("control_qubits", []) + node.targets
+                        circuit.append(gate, args)
         return circuit
 
     def _replace_gate(self, qubit: int, depth: int, node: QNode | None) -> None:
@@ -233,30 +254,38 @@ class QTree(CircuitRepresentation):
         gate_info = self.gate_set[gate_name]
 
         targets = [qubit_index]
-        params = None
-        category = gate_info["category"]
+        params = {}
+        categories_orig = gate_info["category"]
 
-        match category:
-            case "rotation" | "phase":
-                params = {"angle": np.random.uniform(0, 2 * np.pi)}
-            case "controlled":
-                available_qubits = [
-                    q for q in range(self.num_qubits) if q != qubit_index
-                ]
-                control_qubits = np.random.choice(
-                    available_qubits,
-                    size=gate_info["num_qubits"] - 1,
-                    replace=False,
-                ).tolist()
-                params = {"control_qubits": control_qubits}
-            case "swap":
-                available_qubits = [
-                    q for q in range(self.num_qubits) if q != qubit_index
-                ]
-                swap_qubit = np.random.choice(available_qubits, replace=False).tolist()
-                targets.append(swap_qubit)
+        if isinstance(categories_orig, str):
+            categories = [categories_orig]
+        else:
+            categories = categories_orig
 
-        return QNode(gate_name, category, targets, params)
+        for category in categories:
+            match category:
+                case "rotation" | "phase":
+                    params["angle"] = np.random.uniform(0, 2 * np.pi)
+                case "controlled":
+                    available_qubits = [
+                        q for q in range(self.num_qubits) if q != qubit_index
+                    ]
+                    control_qubits = np.random.choice(
+                        available_qubits,
+                        size=gate_info["num_qubits"] - 1,
+                        replace=False,
+                    ).tolist()
+                    params["control_qubits"] = control_qubits
+                case "swap":
+                    available_qubits = [
+                        q for q in range(self.num_qubits) if q != qubit_index
+                    ]
+                    swap_qubit = np.random.choice(
+                        available_qubits, replace=False
+                    ).tolist()
+                    targets.append(swap_qubit)
+
+        return QNode(gate_name, categories_orig, targets, params)
 
     def _validate_and_fix_circuit(self) -> None:
         """
@@ -278,19 +307,44 @@ class QTree(CircuitRepresentation):
             stationary = current_node.targets[0]
             qubits_to_process = []
 
-            if len(current_node.targets) > 1:
-                qubits_to_process.append(current_node.targets[1:])
-            qubits_to_process.extend(current_node.params.get("control_qubits"))
-
-            if min(qubits_to_process) < stationary:
-                start_index = min(qubits_to_process)
-                end_index = stationary
+            if (
+                isinstance(current_node.gate_category, str)
+                and current_node.gate_category == "swap"
+            ):
+                # For swap gates, we handle the two target qubits
+                qubits_to_process = current_node.targets[1:]
+            elif (
+                isinstance(current_node.gate_category, list)
+                and "swap" in current_node.gate_category
+            ):
+                # For gates that might have swap in a list of categories
+                qubits_to_process = current_node.targets[1:]
             else:
-                start_index = stationary + 1
-                end_index = max(qubits_to_process) + 1
+                # For controlled gates or other multi-qubit gates
+                if len(current_node.targets) > 1:
+                    qubits_to_process.extend(current_node.targets[1:])
+                qubits_to_process.extend(current_node.params.get("control_qubits", []))
 
-            for qubit in range(start_index, end_index):
-                self._replace_gate(qubit, depth, None)
+            # Flatten the list if it contains nested lists
+            flat_qubits = []
+            for item in qubits_to_process:
+                if isinstance(item, list):
+                    flat_qubits.extend(item)
+                else:
+                    flat_qubits.append(item)
+            qubits_to_process = flat_qubits
+
+            # If we have qubits to process
+            if qubits_to_process:
+                if min(qubits_to_process) < stationary:
+                    start_index = min(qubits_to_process)
+                    end_index = stationary
+                else:
+                    start_index = stationary + 1
+                    end_index = max(qubits_to_process) + 1
+
+                for qubit in range(start_index, end_index):
+                    self._replace_gate(qubit, depth, None)
 
             checked_nodes.add((current_node, depth))
             dependent_nodes = self._get_dependent_nodes()
@@ -330,8 +384,17 @@ class QTree(CircuitRepresentation):
         for q in range(self.num_qubits):
             for d in range(self.max_depth):
                 node = self._get_node(q, d)
-                if node is not None and node.gate_category in ["controlled", "swap"]:
-                    dependent_nodes.add((node, d))
+                if node is not None:
+                    if (
+                        isinstance(node.gate_category, str)
+                        and node.gate_category in ["controlled", "swap"]
+                    ) or (
+                        isinstance(node.gate_category, list)
+                        and any(
+                            cat in ["controlled", "swap"] for cat in node.gate_category
+                        )
+                    ):
+                        dependent_nodes.add((node, d))
 
         return dependent_nodes
 
