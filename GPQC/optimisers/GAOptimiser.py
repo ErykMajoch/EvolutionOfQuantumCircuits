@@ -16,6 +16,14 @@ class GAOptimiser(BaseOptimiser):
             requirements: Dict[str, Any],
             representation: Type[CircuitRepresentation] = QTree,
     ) -> None:
+        """
+        Initialise the GA optimiser with the given requirements and representation
+
+        Args:
+            requirements: Dictionary containing GA parameters and target specifications
+            representation: The circuit representation class to use (default: QTree)
+        """
+
         super().__init__(requirements, representation)
 
         # Evolution parameters
@@ -23,7 +31,8 @@ class GAOptimiser(BaseOptimiser):
         self.diversity_threshold = ga_params.get("diversity_threshold", 0.3)
 
         selection_params = ga_params.get("selection_params", {})
-        self.selection_method = selection_params.get("selection_method", "tournament")
+        self.selection_method = selection_params.get(
+            "selection_method", "tournament")
         if self.selection_method == "tournament":
             self.tournament_size = selection_params.get("tournament_size", 3)
 
@@ -31,6 +40,16 @@ class GAOptimiser(BaseOptimiser):
         self.fitness_scores = np.array([], dtype=float)
 
     def evaluate_population(self, population: np.array = None) -> Optional[np.ndarray]:
+        """
+        Evaluate the fitness of each individual in the population
+
+        Args:
+            population: Optional population to evaluate (uses self.population if None)
+
+        Returns:
+            Array of fitness scores (implicitly stored in self.fitness_scores)
+        """
+
         self.fitness_scores = np.ndarray((self.population_size,), dtype=float)
         for index, individual in enumerate(self.population):
             operator = individual.qiskit_operator
@@ -39,18 +58,33 @@ class GAOptimiser(BaseOptimiser):
             )
 
     def calculate_diversity(self) -> float:
+        """
+        Calculate the diversity of the current population based on individual similarities
+
+        Returns:
+            Float value representing population diversity (0-1 range)
+        """
+
         diversity_sum = 0.0
         total_comparisons = 0
 
         for i in range(len(self.population)):
             for j in range(i + 1, len(self.population)):
-                similarity = self.population[i].calculate_similarity(self.population[j])
+                similarity = self.population[i].calculate_similarity(
+                    self.population[j])
                 diversity_sum += 1.0 - similarity
                 total_comparisons += 1
 
         return diversity_sum / total_comparisons if total_comparisons > 0 else 0
 
     def apply_fitness_sharing(self) -> np.array:
+        """
+        Apply fitness sharing to promote diversity in the population
+
+        Returns:
+            Array of shared fitness values
+        """
+
         shared_fitness = self.fitness_scores.copy()
         sharing_radius = 0.4
 
@@ -65,7 +99,7 @@ class GAOptimiser(BaseOptimiser):
 
                     if similarity > sharing_radius:
                         niche_count += (similarity - sharing_radius) / (
-                                1 - sharing_radius
+                            1 - sharing_radius
                         )
 
             shared_fitness[i] = self.fitness_scores[i] / max(1.0, niche_count)
@@ -73,6 +107,13 @@ class GAOptimiser(BaseOptimiser):
         return shared_fitness
 
     def select_parents(self) -> np.array:
+        """
+        Select parents for breeding based on their fitness scores
+
+        Returns:
+            Array of selected parent individuals
+        """
+
         diversity = self.calculate_diversity()
         fitness_for_selection = self.fitness_scores
         if diversity < self.diversity_threshold:
@@ -95,6 +136,13 @@ class GAOptimiser(BaseOptimiser):
                 )
 
     def run(self, plot_results: bool = False) -> None:
+        """
+        Run the genetic algorithm optimisation process
+
+        Args:
+            plot_results: Whether to generate plots of the optimisation process
+        """
+
         self._reset_optimiser()
         self.initialise_population(self.population_size)
         self.evaluate_population()
@@ -121,6 +169,7 @@ class GAOptimiser(BaseOptimiser):
                     f"Restarting at generation {self.current_generation + 1} due to stagnation"
                 )
 
+                # Keep elite individuals and reinitialise the rest of the population
                 elite_count = max(5, int(0.1 * self.population_size))
                 elite_indices = np.argsort(self.fitness_scores)[-elite_count:]
                 elite = np.array(
@@ -139,12 +188,15 @@ class GAOptimiser(BaseOptimiser):
             adaptive_rates = self._calculate_adaptive_rates()
             parents = self.select_parents()
 
+            # Keep best individuals
             elite_indices = np.argsort(self.fitness_scores)[
-                            -adaptive_rates["elite_count"]:
-                            ]
+                -adaptive_rates["elite_count"]:
+            ]
             new_population = np.array(
                 [self.population[i].replicate() for i in elite_indices]
             )
+
+            # Create offspring for the rest of the population
             size = self.population_size - adaptive_rates["elite_count"]
             offspring = self._create_offspring(parents, size)
 
@@ -156,7 +208,8 @@ class GAOptimiser(BaseOptimiser):
             best_fitness = self.fitness_scores[best_index]
 
             self.metrics_history["best_fitness"].append(best_fitness)
-            self.metrics_history["average_fitness"].append(np.mean(self.fitness_scores))
+            self.metrics_history["average_fitness"].append(
+                np.mean(self.fitness_scores))
             self.metrics_history["crossover_rate"].append(
                 adaptive_rates["crossover_rate"]
             )
@@ -187,26 +240,39 @@ class GAOptimiser(BaseOptimiser):
                     f" Diversity = {diversity:.2f}"
                 )
 
-        print(f"Evolution completed after {self.current_generation + 1} generations")
+        print(
+            f"Evolution completed after {self.current_generation + 1} generations")
         print(f"Best fitness achieved: {self.best_fidelity:.4f}")
 
         if plot_results:
             self._plot_results()
 
     def _plot_results(self) -> None:
+        """
+        Generate plots showing the evolution progress and parameter adaptation
+
+        Creates a 3-panel figure showing:
+        1. Fitness evolution (best and average)
+        2. Fitness gap as an exploration indicator
+        3. Parameter evolution (mutation rate, crossover rate, max mutations)
+
+        Saves the figure to a file named "single_objective_evolution_history.png"
+        """
         plt.figure(figsize=(12, 12))
 
-        # Plot fitness
+        # Plot fitness history
         plt.subplot(3, 1, 1)
-        plt.plot(self.metrics_history["best_fitness"], "b-", label="Best Fitness")
-        plt.plot(self.metrics_history["average_fitness"], "r-", label="Average Fitness")
+        plt.plot(self.metrics_history["best_fitness"],
+                 "b-", label="Best Fitness")
+        plt.plot(self.metrics_history["average_fitness"],
+                 "r-", label="Average Fitness")
         plt.xlabel("Generation")
         plt.ylabel("Fitness")
         plt.title("Fitness Evolution")
         plt.legend()
         plt.grid(True)
 
-        # Plot fitness difference (to show exploration)
+        # Plot fitness difference to show exploration
         plt.subplot(3, 1, 2)
         fitness_gap = [
             best - avg
@@ -222,18 +288,19 @@ class GAOptimiser(BaseOptimiser):
         plt.grid(True)
         plt.legend()
 
-        # Plot rates
+        # Plot parameter history
         plt.subplot(3, 1, 3)
-        plt.plot(self.metrics_history["crossover_rate"], "b-", label="Crossover Rate")
-        plt.plot(self.metrics_history["mutation_rate"], "r-", label="Mutation Rate")
+        plt.plot(self.metrics_history["crossover_rate"],
+                 "b-", label="Crossover Rate")
+        plt.plot(self.metrics_history["mutation_rate"],
+                 "r-", label="Mutation Rate")
 
-        # Plot max mutations on secondary y-axis for better visibility (as it's an integer)
         ax1 = plt.gca()
         ax2 = ax1.twinx()
-        ax2.plot(self.metrics_history["max_mutations"], "g--", label="Max Mutations")
+        ax2.plot(self.metrics_history["max_mutations"],
+                 "g--", label="Max Mutations")
         ax2.set_ylabel("Max Mutations")
 
-        # Combine legends from both axes
         lines1, labels1 = ax1.get_legend_handles_labels()
         lines2, labels2 = ax2.get_legend_handles_labels()
         ax1.legend(lines1 + lines2, labels1 + labels2, loc="upper right")
@@ -244,9 +311,13 @@ class GAOptimiser(BaseOptimiser):
         plt.grid(True)
 
         plt.tight_layout()
-        plt.savefig("fitness_history.png")
+        plt.savefig("single_objective_evolution_history.png")
         plt.close()
 
     def _reset_optimiser(self) -> None:
+        """
+        Reset the optimiser state to prepare for a new run
+        """
+
         super()._reset_optimiser()
         self.fitness_scores = np.array([], dtype=float)

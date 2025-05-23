@@ -1,5 +1,4 @@
 from typing import Optional, List, Dict, Any, Type
-from uuid import uuid4
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -20,6 +19,14 @@ class NSGA2Optimiser(BaseOptimiser):
         requirements: Dict[str, Any],
         representation: Type[CircuitRepresentation] = QTree,
     ) -> None:
+        """
+        Initialise the NSGA-II optimiser with the given requirements and representation
+
+        Args:
+            requirements: Dictionary containing NSGA-II parameters and target specifications
+            representation: The circuit representation class to use (default: QTree)
+        """
+
         super().__init__(requirements, representation)
 
         # Evolution parameters
@@ -35,6 +42,16 @@ class NSGA2Optimiser(BaseOptimiser):
         self.fronts = []
 
     def evaluate_population(self, population: np.array = None) -> Optional[np.ndarray]:
+        """
+        Evaluate the fitness of each individual in the population for all objectives
+
+        Args:
+            population: Optional population to evaluate (uses self.population if None)
+
+        Returns:
+            Matrix of fitness scores for all individuals across all objectives
+        """
+
         if population is None:
             population = self.population
 
@@ -51,15 +68,19 @@ class NSGA2Optimiser(BaseOptimiser):
                 objective_name = objective["name"]
                 match objective_name:
                     case "fidelity":
-                        fitness = state_fidelity_fitness(operator, self.target_operator)
+                        fitness = state_fidelity_fitness(
+                            operator, self.target_operator)
                     case "gate_count":
                         fitness = gate_count_fitness(gate_count, max_gates)
                     case "circuit_depth":
-                        fitness = circuit_depth_fitness(circuit_depth, self.max_depth)
+                        fitness = circuit_depth_fitness(
+                            circuit_depth, self.max_depth)
                     case _:
-                        raise ValueError(f"Unknown objective: {objective_name}")
+                        raise ValueError(
+                            f"Unknown objective: {objective_name}")
 
-                fitness_matrix[i, j] = -fitness if objective["minimise"] else fitness
+                fitness_matrix[i, j] = - \
+                    fitness if objective["minimise"] else fitness
 
         if population is self.population:
             self.fitness_matrix = fitness_matrix
@@ -67,6 +88,16 @@ class NSGA2Optimiser(BaseOptimiser):
             return fitness_matrix
 
     def non_dominated_sort(self, fitness_matrix: np.ndarray) -> List[np.ndarray]:
+        """
+        Perform non-dominated sorting on the population
+
+        Args:
+            fitness_matrix: Matrix of fitness values for all individuals across all objectives
+
+        Returns:
+            List of arrays, where each array contains indices of individuals in a Pareto front
+        """
+
         population_size = fitness_matrix.shape[0]
 
         domination_counts = np.zeros(population_size, dtype=int)
@@ -105,6 +136,17 @@ class NSGA2Optimiser(BaseOptimiser):
     def calculate_crowding_distance(
         self, fitness_matrix: np.ndarray, front_indices: np.ndarray
     ) -> np.ndarray:
+        """
+        Calculate crowding distance for individuals in a Pareto front
+
+        Args:
+            fitness_matrix: Matrix of fitness values for all individuals
+            front_indices: Indices of individuals in the current front
+
+        Returns:
+            Array of crowding distances for individuals in the front
+        """
+
         front_size = len(front_indices)
         if front_size <= 2:
             return np.full(front_size, np.inf)
@@ -118,11 +160,13 @@ class NSGA2Optimiser(BaseOptimiser):
             distances[sorted_indices[0]] = np.inf
             distances[sorted_indices[-1]] = np.inf
 
-            objective_range = values[sorted_indices[-1]] - values[sorted_indices[0]]
+            objective_range = values[sorted_indices[-1]
+                                     ] - values[sorted_indices[0]]
             if objective_range > 0:
                 for i in range(1, front_size - 1):
                     distances[sorted_indices[i]] += (
-                        values[sorted_indices[i + 1]] - values[sorted_indices[i - 1]]
+                        values[sorted_indices[i + 1]] -
+                        values[sorted_indices[i - 1]]
                     ) / objective_range
 
         return distances
@@ -130,21 +174,41 @@ class NSGA2Optimiser(BaseOptimiser):
     def calculate_all_crowding_distances(
         self, fitness_matrix: np.ndarray, fronts: List[np.ndarray]
     ) -> np.ndarray:
+        """
+        Calculate crowding distances for all individuals across all fronts
+
+        Args:
+            fitness_matrix: Matrix of fitness values for all individuals
+            fronts: List of arrays containing indices of individuals in each front
+
+        Returns:
+            Array of crowding distances for all individuals
+        """
+
         population_size = fitness_matrix.shape[0]
         crowding_distances = np.zeros(population_size)
 
         for front in fronts:
-            front_distances = self.calculate_crowding_distance(fitness_matrix, front)
+            front_distances = self.calculate_crowding_distance(
+                fitness_matrix, front)
             crowding_distances[front] = front_distances
 
         return crowding_distances
 
     def select_parents(self) -> np.array:
+        """
+        Select parents for breeding based on rank and crowding distance
+
+        Returns:
+            Array of selected parent individuals
+        """
+
         parents = np.empty(self.population_size, dtype=object)
         front_length = len(self.fronts)
 
         for i in range(self.population_size):
-            index1, index2 = np.random.choice(self.population_size, 2, replace=False)
+            index1, index2 = np.random.choice(
+                self.population_size, 2, replace=False)
 
             rank1 = next(
                 (j for j, front in enumerate(self.fronts) if index1 in front),
@@ -170,6 +234,13 @@ class NSGA2Optimiser(BaseOptimiser):
         return parents
 
     def run(self, plot_results: bool = False) -> None:
+        """
+        Run the NSGA-II multi-objective optimisation process
+
+        Args:
+            plot_results: Whether to generate plots of the optimisation process
+        """
+
         self._reset_optimiser()
         self.initialise_population(self.population_size)
         self.evaluate_population()
@@ -210,7 +281,7 @@ class NSGA2Optimiser(BaseOptimiser):
                     ]
                 )
 
-                # Reinitialize the rest of the population
+                # Reinitialise the rest of the population
                 self.initialise_population(self.population_size - len(elite))
                 self.population = np.append(self.population, elite)
 
@@ -230,7 +301,8 @@ class NSGA2Optimiser(BaseOptimiser):
             offspring_fitness = self.evaluate_population(offspring)
 
             combined_population = np.concatenate((self.population, offspring))
-            combined_fitness = np.concatenate((self.fitness_matrix, offspring_fitness))
+            combined_fitness = np.concatenate(
+                (self.fitness_matrix, offspring_fitness))
             combined_fronts = self.non_dominated_sort(combined_fitness)
             combined_crowding = self.calculate_all_crowding_distances(
                 combined_fitness, combined_fronts
@@ -278,7 +350,8 @@ class NSGA2Optimiser(BaseOptimiser):
 
             # Update the best individual based on fidelity
             first_front = self.fronts[0]
-            best_index_in_front = np.argmax(self.fitness_matrix[first_front, 0])
+            best_index_in_front = np.argmax(
+                self.fitness_matrix[first_front, 0])
             best_individual_index = first_front[best_index_in_front]
             if len(first_front) > 0:
                 current_best_fidelity = self.fitness_matrix[best_individual_index, 0]
@@ -294,13 +367,14 @@ class NSGA2Optimiser(BaseOptimiser):
                 np.abs(self.fitness_matrix[best_individual_index])
             )
 
-            # Track per-objective metrics
+            # Track objective metrics
             for i, objective in enumerate(self.objectives):
                 objective_name = objective["name"]
 
-                # Best value in this objective (from the Pareto front)
+                # Best value in this objective (from Pareto front)
                 if len(first_front) > 0:
-                    best_obj_index = np.argmax(self.fitness_matrix[first_front, i])
+                    best_obj_index = np.argmax(
+                        self.fitness_matrix[first_front, i])
                     best_obj_value = self.fitness_matrix[first_front[best_obj_index], i]
                     self.metrics_history[f"best_{objective_name}"].append(
                         best_obj_value
@@ -318,18 +392,19 @@ class NSGA2Optimiser(BaseOptimiser):
             for name, rate in adaptive_rates.items():
                 self.metrics_history[name].append(rate)
 
+            # Calculate spread as sum of ranges in each objective
             if len(first_front) > 1:
                 front_values = self.fitness_matrix[first_front]
-                # Calculate spread as the sum of ranges in each objective
                 spread = np.sum(np.ptp(front_values, axis=0))
                 self.metrics_history["pareto_front_spread"].append(spread)
             else:
                 self.metrics_history["pareto_front_spread"].append(0)
 
-            # Store Pareto front for animation (every 5 generations to save memory)
+            # Store Pareto front
             if generation % 5 == 0 and len(first_front) > 0:
                 front_copy = self.fitness_matrix[first_front].copy()
-                self.metrics_history["pareto_front"].append((generation, front_copy))
+                self.metrics_history["pareto_front"].append(
+                    (generation, front_copy))
 
             if self.best_fidelity >= self.fitness_threshold:
                 print(
@@ -346,7 +421,8 @@ class NSGA2Optimiser(BaseOptimiser):
                     f"Pareto front size = {len(self.fronts[0])}, "
                 )
 
-        print(f"Evolution completed after {self.current_generation + 1} generations")
+        print(
+            f"Evolution completed after {self.current_generation + 1} generations")
         print(f"Best fitness achieved: {self.best_fidelity:.4f}")
         print(f"Final Pareto front size: {len(self.fronts[0])}")
 
@@ -354,9 +430,20 @@ class NSGA2Optimiser(BaseOptimiser):
             self._plot_results()
 
     def _plot_results(self) -> None:
+        """
+        Generate plots showing the multi-objective optimisation progress
+
+        Creates a multi-panel figure showing:
+        1. Best individual's objective values over generations
+        2. Best and average objective values over generations
+        3. 3D visualization of the final Pareto front (for 3 objectives)
+
+        Saves the figure to a file named "nsga2_evolution_history.png"
+        """
+
         fig = plt.figure(figsize=(10, 18))
 
-        # 1. Plot the best individual's objective values over generations
+        # Best individual's objective values history
         ax1 = fig.add_subplot(3, 1, 1)
         generations = range(len(self.metrics_history["best_individual"]))
         best_individuals = np.array(self.metrics_history["best_individual"])
@@ -364,7 +451,8 @@ class NSGA2Optimiser(BaseOptimiser):
 
         for i, objective in enumerate(self.objectives):
             objective_name = objective["name"]
-            ax1.plot(generations, best_individuals[:, i], label=f"{objective_name}")
+            ax1.plot(
+                generations, best_individuals[:, i], label=f"{objective_name}")
 
         ax1.set_title("Best Individual's Objective Values")
         ax1.set_xlabel("Generation")
@@ -373,13 +461,15 @@ class NSGA2Optimiser(BaseOptimiser):
         ax1.legend()
         ax1.grid(True)
 
-        # 2. Plot the best and average objective fitness values across generations
+        # Best and average objective fitness history
         ax2 = fig.add_subplot(3, 1, 2)
 
         for i, objective in enumerate(self.objectives):
             objective_name = objective["name"]
-            best_values = np.abs(self.metrics_history[f"best_{objective_name}"])
-            avg_values = np.abs(self.metrics_history[f"average_{objective_name}"])
+            best_values = np.abs(
+                self.metrics_history[f"best_{objective_name}"])
+            avg_values = np.abs(
+                self.metrics_history[f"average_{objective_name}"])
 
             ax2.plot(
                 generations,
@@ -404,35 +494,11 @@ class NSGA2Optimiser(BaseOptimiser):
         ax2.legend()
         ax2.grid(True)
 
-        # 3. Visualise the final Pareto front
+        # Final 3D Pareto front
         if len(self.fronts) > 0 and len(self.fronts[0]) > 0:
             front_values = np.abs(self.fitness_matrix[self.fronts[0]])
 
-            if self.num_objectives == 2:
-                # 2D Pareto front
-                ax3 = fig.add_subplot(3, 1, 3)
-                fidelity_idx = next(
-                    (
-                        i
-                        for i, obj in enumerate(self.objectives)
-                        if obj["name"] == "fidelity"
-                    ),
-                    0,
-                )
-                x_idx = 1 if fidelity_idx == 0 else 0
-
-                ax3.scatter(
-                    front_values[:, x_idx], front_values[:, fidelity_idx], c="blue"
-                )
-                ax3.set_title("Pareto Front")
-                ax3.set_xlabel(f"{self.objectives[x_idx]['name']}")
-                ax3.set_ylabel(f"{self.objectives[fidelity_idx]['name']}")
-                ax3.set_xlim(0, 1)
-                ax3.set_ylim(0, 1)
-                ax3.grid(True)
-
-            elif self.num_objectives == 3:
-                # 3D Pareto front
+            if self.num_objectives == 3:
                 ax3 = fig.add_subplot(3, 1, 3, projection="3d")
 
                 fidelity_idx = next(
@@ -469,7 +535,7 @@ class NSGA2Optimiser(BaseOptimiser):
                     label="Best individual",
                 )
 
-                # Line to x-y plane (z=0)
+                # Line to x-y plane
                 ax3.plot(
                     [best_point[x_idx], best_point[x_idx]],
                     [best_point[y_idx], best_point[y_idx]],
@@ -478,7 +544,7 @@ class NSGA2Optimiser(BaseOptimiser):
                     alpha=0.7,
                 )
 
-                # Line to x-z plane (y=0)
+                # Line to x-z plane
                 ax3.plot(
                     [best_point[x_idx], best_point[x_idx]],
                     [best_point[y_idx], 1],
@@ -487,7 +553,7 @@ class NSGA2Optimiser(BaseOptimiser):
                     alpha=0.7,
                 )
 
-                # Line to y-z plane (x=0)
+                # Line to y-z plane
                 ax3.plot(
                     [best_point[x_idx], 0],
                     [best_point[y_idx], best_point[y_idx]],
@@ -506,41 +572,21 @@ class NSGA2Optimiser(BaseOptimiser):
                 ax3.legend()
 
             else:
-                # For more than 3 objectives, use parallel coordinates plot
-                ax3 = fig.add_subplot(3, 1, 3)
-                objective_order = list(range(self.num_objectives))
-                fidelity_idx = next(
-                    (
-                        i
-                        for i, obj in enumerate(self.objectives)
-                        if obj["name"] == "fidelity"
-                    ),
-                    -1,
+                print(
+                    f"Oops. {self.num_objectives} objective Pareto front visualisation not suported!"
                 )
-                if fidelity_idx != -1 and fidelity_idx != 0:
-                    objective_order[0], objective_order[fidelity_idx] = fidelity_idx, 0
 
-                ordered_names = [self.objectives[i]["name"] for i in objective_order]
+        plt.suptitle("NSGA-II Optimisation Results", fontsize=16)
+        plt.tight_layout(rect=(0.0, 0.0, 1.0, 0.95))
 
-                for i in range(len(front_values)):
-                    xs = np.arange(self.num_objectives)
-                    ys = front_values[i, objective_order]
-                    ax3.plot(xs, ys, "b-", alpha=0.5)
-
-                ax3.set_title("Pareto Front (Parallel Coordinates)")
-                ax3.set_xticks(np.arange(self.num_objectives))
-                ax3.set_xticklabels(ordered_names)
-                ax3.set_ylim(0, 1)
-                ax3.set_ylabel("Objective Value")
-                ax3.grid(True)
-
-        plt.suptitle("NSGA-II Optimization Results", fontsize=16)
-        plt.tight_layout(rect=[0, 0, 1, 0.95])
-
-        plt.savefig(f"nsga2_results_{uuid4()}.png", dpi=300)
+        plt.savefig(f"nsga2_evolution_history.png", dpi=300)
         plt.close()
 
     def _reset_optimiser(self):
+        """
+        Reset the optimiser state to prepare for a new run
+        """
+
         super()._reset_optimiser()
         self.fitness_matrix = np.array([], dtype=float)
         self.crowding_distances = np.array([], dtype=float)
