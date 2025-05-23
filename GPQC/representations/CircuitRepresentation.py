@@ -6,17 +6,6 @@ from qiskit import QuantumCircuit
 
 
 class CircuitRepresentation(ABC):
-    """
-    Abstract base class for quantum circuit representations
-
-    Attributes:
-        num_qubits: Number of qubits in the circuit
-        max_depth: Maximum depth of the circuit
-        gate_set: Dictionary of available gates and their properties
-        gate_probs: Array of normalised probabilities for gate selection
-        random_gate_prob: Probability of adding a gate at each position
-    """
-
     def __init__(
             self,
             num_qubits: int,
@@ -39,6 +28,7 @@ class CircuitRepresentation(ABC):
         """
         Generate a random quantum circuit
         """
+
         pass
 
     @abstractmethod
@@ -60,6 +50,7 @@ class CircuitRepresentation(ABC):
             max_generations: Maximum number of generations
             max_mutations: Maximum number of mutations to apply
         """
+
         pass
 
     @abstractmethod
@@ -76,22 +67,24 @@ class CircuitRepresentation(ABC):
         Returns:
             A new circuit representation resulting from the crossover
         """
+
         pass
 
     @abstractmethod
     def replicate(self) -> "CircuitRepresentation":
         """
-        Create a deep copy of this circuit representation.
+        Create a deep copy of this circuit representation
 
         Returns:
             A new identical copy of this circuit representation
         """
+
         pass
 
     @abstractmethod
     def calculate_similarity(self, other: "CircuitRepresentation") -> float:
         """
-        Calculate similarity between this circuit and another circuit.
+        Calculate similarity between this circuit and another circuit
 
         Args:
             other: Another CircuitRepresentation object to compare with
@@ -100,6 +93,7 @@ class CircuitRepresentation(ABC):
             Float value between 0.0 and 1.0, where 1.0 means identical circuits
             and 0.0 means completely different circuits.
         """
+
         pass
 
     @abstractmethod

@@ -13,13 +13,6 @@ from gpqc.representations.Tree.QNode import QNode
 
 
 class QTree(CircuitRepresentation):
-    """
-    Tree-based representation of a quantum circuit.
-
-    Attributes:
-        nodes: 2D array of QNode objects representing gates in the circuit
-    """
-
     def __init__(
         self,
         num_qubits: int,
@@ -44,12 +37,14 @@ class QTree(CircuitRepresentation):
         """
         Generate a random quantum circuit
         """
+
         self.nodes = np.ndarray((self.num_qubits, self.max_depth), dtype=QNode)
 
         for qubit in range(self.num_qubits):
             for depth in range(self.max_depth):
                 if np.random.random() < self.random_gate_prob:
-                    self._replace_gate(qubit, depth, self._generate_random_node(qubit))
+                    self._replace_gate(
+                        qubit, depth, self._generate_random_node(qubit))
 
         self._validate_and_fix_circuit()
 
@@ -88,7 +83,8 @@ class QTree(CircuitRepresentation):
                             adjustment = (
                                 1 - generation / max_generations
                             ) * np.random.uniform(-np.pi / 2, np.pi / 2)
-                            node.params["angle"] = (angle + adjustment) % (2 * np.pi)
+                            node.params["angle"] = (
+                                angle + adjustment) % (2 * np.pi)
                             self._replace_gate(qubit, depth, node)
                 case "insert":
                     empty_mask = np.equal(self.nodes, None)
@@ -98,7 +94,8 @@ class QTree(CircuitRepresentation):
                         insert_qubit = empty_indices[0][random_idx]
                         insert_depth = empty_indices[1][random_idx]
                         new_node = self._generate_random_node(insert_qubit)
-                        self._replace_gate(insert_qubit, insert_depth, new_node)
+                        self._replace_gate(
+                            insert_qubit, insert_depth, new_node)
                 case "delete":
                     self._replace_gate(qubit, depth, None)
                 case _:
@@ -107,7 +104,7 @@ class QTree(CircuitRepresentation):
                     )
         self._validate_and_fix_circuit()
 
-    def crossover(self, other: "Tree", crossover_rate: float = 0.7) -> "Tree":
+    def crossover(self, other: "QTree", crossover_rate: float = 0.7) -> "QTree":
         """
         Create a new circuit by combining this circuit with another
 
@@ -118,6 +115,7 @@ class QTree(CircuitRepresentation):
         Returns:
             A new Tree resulting from the crossover
         """
+
         offspring = self.replicate()
 
         if np.random.random() > crossover_rate:
@@ -131,16 +129,17 @@ class QTree(CircuitRepresentation):
 
         return offspring
 
-    def replicate(self) -> "Tree":
+    def replicate(self) -> "QTree":
         """
         Create a deep copy of this circuit
 
         Returns:
             A new identical copy of this Tree
         """
+
         return deepcopy(self)
 
-    def calculate_similarity(self, other: "Tree") -> float:
+    def calculate_similarity(self, other: "QTree") -> float:
         """
         Calculate similarity between this circuit and another circuit
 
@@ -151,8 +150,10 @@ class QTree(CircuitRepresentation):
             Float value between 0.0 and 1.0, where 1.0 means identical circuits
             and 0.0 means completely different circuits.
         """
+
         if not isinstance(other, QTree):
-            raise TypeError(f"Expected {type(self)} instance, got {type(other)}")
+            raise TypeError(
+                f"Expected {type(self)} instance, got {type(other)}")
 
         if self.num_qubits != other.num_qubits or self.max_depth != other.max_depth:
             return 0.0
@@ -186,6 +187,7 @@ class QTree(CircuitRepresentation):
         Returns:
             Qiskit QuantumCircuit representing this circuit
         """
+
         circuit = QuantumCircuit(self.num_qubits)
 
         for depth in range(self.max_depth):
@@ -194,7 +196,7 @@ class QTree(CircuitRepresentation):
                 if node:
                     gate = QISKIT_GATES[node.gate_type]
 
-                    # Handle parameterized gates
+                    # Handle parameterised gates
                     if isinstance(node.gate_category, list):
                         if (
                             "phase" in node.gate_category
@@ -212,11 +214,10 @@ class QTree(CircuitRepresentation):
                         isinstance(node.gate_category, list)
                         and "swap" in node.gate_category
                     ):
-                        # For swap gates, we only use the target qubits (no control qubits)
                         circuit.append(gate, node.targets)
                     else:
-                        # For other gates, we include both control qubits and targets
-                        args = node.params.get("control_qubits", []) + node.targets
+                        args = node.params.get(
+                            "control_qubits", []) + node.targets
                         circuit.append(gate, args)
         return circuit
 
@@ -236,7 +237,8 @@ class QTree(CircuitRepresentation):
             )
 
         if not (0 <= depth < self.max_depth):
-            raise IndexError(f"Depth {depth} out of range [0, {self.max_depth - 1}]")
+            raise IndexError(
+                f"Depth {depth} out of range [0, {self.max_depth - 1}]")
 
         self.nodes[qubit, depth] = node
 
@@ -250,7 +252,9 @@ class QTree(CircuitRepresentation):
         Returns:
             A randomly generated QNode
         """
-        gate_name = np.random.choice(list(self.gate_set.keys()), p=self.gate_probs)
+
+        gate_name = np.random.choice(
+            list(self.gate_set.keys()), p=self.gate_probs)
         gate_info = self.gate_set[gate_name]
 
         targets = [qubit_index]
@@ -290,10 +294,8 @@ class QTree(CircuitRepresentation):
     def _validate_and_fix_circuit(self) -> None:
         """
         Validate the circuit and fix any inconsistencies
-
-        This method ensures that controlled gates and multi-qubit gates
-        don't conflict with other gates on the same qubits at the same depth.
         """
+
         checked_nodes = set()
         dependent_nodes = self._get_dependent_nodes()
 
@@ -311,21 +313,18 @@ class QTree(CircuitRepresentation):
                 isinstance(current_node.gate_category, str)
                 and current_node.gate_category == "swap"
             ):
-                # For swap gates, we handle the two target qubits
                 qubits_to_process = current_node.targets[1:]
             elif (
                 isinstance(current_node.gate_category, list)
                 and "swap" in current_node.gate_category
             ):
-                # For gates that might have swap in a list of categories
                 qubits_to_process = current_node.targets[1:]
             else:
-                # For controlled gates or other multi-qubit gates
                 if len(current_node.targets) > 1:
                     qubits_to_process.extend(current_node.targets[1:])
-                qubits_to_process.extend(current_node.params.get("control_qubits", []))
+                qubits_to_process.extend(
+                    current_node.params.get("control_qubits", []))
 
-            # Flatten the list if it contains nested lists
             flat_qubits = []
             for item in qubits_to_process:
                 if isinstance(item, list):
@@ -363,13 +362,15 @@ class QTree(CircuitRepresentation):
         Returns:
             QNode at the specified position, or None if empty
         """
+
         if not (0 <= qubit < self.num_qubits):
             raise IndexError(
                 f"Qubit index {qubit} out of range [0, {self.num_qubits - 1}]"
             )
 
         if not (0 <= depth < self.max_depth):
-            raise IndexError(f"Depth {depth} out of range [0, {self.max_depth - 1}]")
+            raise IndexError(
+                f"Depth {depth} out of range [0, {self.max_depth - 1}]")
 
         return self.nodes[qubit, depth]
 
@@ -380,6 +381,7 @@ class QTree(CircuitRepresentation):
         Returns:
             Set of tuples (node, depth) for nodes that are controlled gates or swaps
         """
+
         dependent_nodes = set()
         for q in range(self.num_qubits):
             for d in range(self.max_depth):
@@ -405,6 +407,7 @@ class QTree(CircuitRepresentation):
         Returns:
             String representation of the circuit
         """
+
         tree = treelib.Tree()
         tree.create_node("Quantum Circuit", "root")
 
@@ -426,7 +429,8 @@ class QTree(CircuitRepresentation):
                         label += f" ({param_str})"
                     tree.create_node(label, depth_id, parent=parent_id)
                 else:
-                    tree.create_node(f"Depth {d + 1}: None", depth_id, parent=parent_id)
+                    tree.create_node(
+                        f"Depth {d + 1}: None", depth_id, parent=parent_id)
 
                 parent_id = depth_id
 

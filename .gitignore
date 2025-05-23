@@ -1,22 +1,3 @@
-# LaTex Build Files:
-**/*.aux*
-**/*.bbl*
-**/*.blg*
-**/*.fdb_latexmk*
-**/*.synctex*
-**/*.lof*
-**/*.log*
-**/*.lot*
-**/*.fls*
-**/*.out*
-**/*.toc*
-**/*.fmt*
-**/*.fot*
-**/*.cb*
-**/*.lb*
-**/*.run*
-**/*.bcf*
-
 # Python Solution Files:
 **/.vscode
 **/.idea
